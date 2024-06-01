@@ -1,19 +1,5 @@
 
-#include <math.h>
-#include <stdlib.h>
-#include <stdio.h>
-
-typedef struct PID_t{
-    float Kp, Ki, Kd;
-    uint16_t setpoint;
-    short error[2];
-    float dt;
-    uint16_t output[2];
-    float P, I, D;
-    short integral;
-    uint16_t min, max;
-    bool inverted_mode;
-}PID_t;
+#include "utils.h"
 
 
 PID_t createPID(float _Kp, float _Ki, float _Kd,
@@ -40,22 +26,6 @@ PID_t createPID(float _Kp, float _Ki, float _Kd,
 }
 
 
-/**
- * @brief   (pid, ball) ==> P+I+D
- *   This function should be called every time "loop()" executes.
- *   the function will decide for itself whether a new
- *   pid Output needs to be computed.
- * 
- *   note[1]: error is expressed in pixels, control should be a pulse width
- * 
- *   note[2]: this could be split in two functions that can run parallel,
- *            but thread switch time is probably greater than compute time.
- *            [in any case will be tested]
- * 
- * @param pidX 
- * @param pidY 
- * @param ball 
- */
 
 void PIDCompute(PID_t* pidX, PID_t* pidY, Ball_t ball) {
 
