@@ -1,0 +1,7 @@
+{
+    "files.associations": {
+        "pid.h": "c",
+        "utils.h": "c",
+        "ball_physic.h": "c"
+    }
+}
