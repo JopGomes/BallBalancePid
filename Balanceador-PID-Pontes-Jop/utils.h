@@ -50,6 +50,17 @@ typedef struct Point{
     uint16_t y;
 } Point_t;
 
+typedef struct Pair {
+    float R;
+    float H;
+} Pair;
+
+typedef struct Verts {
+    Pair P1; 
+    Pair P2;
+    Pair P3;
+} Verts;
+
 
 //_ Global Variables _______________________
 
@@ -66,6 +77,7 @@ typedef struct Point{
 
 /*===============================================*/
 #define     PI                  3.1415
+// #define     PI                  3.14159265358979323846
 
 #define     CONTROL_AREA        360
 
@@ -74,6 +86,13 @@ typedef struct Point{
 
 #define     SETPOINT_X          FRAME_WIDTH/2
 #define     SETPOINT_Y          FRAME_HEIGHT/2
+
+/*===============================================*/
+/*ABOUT MECANIC*/
+
+#define L1 4.0
+#define L2 5.5
+#define HEIGHT sqrt(2)/2*(pow(L1,2) +sqrt(2*pow(L2,2) - pow(L1,2))); 
 /*===============================================*/
 
 #endif

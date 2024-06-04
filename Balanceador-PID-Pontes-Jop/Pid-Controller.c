@@ -27,6 +27,26 @@ PID_t createPID(float _Kp, float _Ki, float _Kd,
 
 
 
+
+
+Verts getCoordinatesFromAlphas(int alphax , int alphay){
+    Verts newVerts;
+    newVerts.P1.R = 12*cos(alphay) - 4*cos(alphax);
+    newVerts.P1.H = HEIGHT-8*sin(alphay); // P11
+    newVerts.P2.R = 8*cos(alphax);
+    newVerts.P2.H = HEIGHT+4*sin(alphay)-4*sqrt(3)*sin(alphax); // P9
+    newVerts.P3.R = 8*cos(alphax),HEIGHT;
+    newVerts.P3.H = 4*sin(alphay)+4*sqrt(3)*sin(alphax); // P10
+    return newVerts;
+}
+
+int coordinatesToBeta(float R, float H){
+	double betaRadian = asin((pow(H,2) + pow((8-R),2) + pow(L1,2)-pow(L2,2))/(2*L1*sqrt(pow(H,2)+pow((8-R),2)))) - asin((8-R)/(sqrt(pow(H,2)+pow((8-R),2))));
+	int betaDegrees = round(betaRadian*(180/PI));
+	return betaDegrees;
+}
+
+
 void PIDCompute(PID_t* pidX, PID_t* pidY, Ball_t ball) {
 
 /*=================================================================================*/
