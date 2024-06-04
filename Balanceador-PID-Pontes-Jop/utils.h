@@ -69,7 +69,8 @@ typedef struct Serv {
 
 //_ Global Variables _______________________
 
-/*========== about servos =======================*/
+/*===============================================*/
+/*ABOUT SERVOS*/
 #define   ANGLE_OFFSET      5900
 
 #define   X_HALF_ANGLE      23650
@@ -80,8 +81,10 @@ typedef struct Serv {
 #define	  Y_MAX_ANGLE       Y_HALF_ANGLE+ANGLE_OFFSET
 #define   Y_MIN_ANGLE       Y_HALF_ANGLE-ANGLE_OFFSET
 
-/*===============================================*/
 #define     PI                  3.1415
+
+/*===============================================*/
+/*ABOUT MECANIC*/
 // #define     PI                  3.14159265358979323846
 
 #define     CONTROL_AREA        360
@@ -92,13 +95,12 @@ typedef struct Serv {
 #define     SETPOINT_X          FRAME_WIDTH/2
 #define     SETPOINT_Y          FRAME_HEIGHT/2
 
-/*===============================================*/
-/*ABOUT MECANIC*/
-
 #define L1 4.0
 #define L2 5.5
 #define HEIGHT sqrt(2)/2*(pow(L1,2) +sqrt(2*pow(L2,2) - pow(L1,2))); 
 
+/*===============================================*/
+/*ABOUT PID*/
 
 #define KPx 16.0
 #define KLx 1.6

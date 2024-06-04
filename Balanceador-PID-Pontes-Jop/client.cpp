@@ -8,7 +8,25 @@
 #pragma comment(lib, "ws2_32.lib")
 using namespace std;
 
-int sendMessage(SOCKET clientSocket, const std::string& message) {
+class Client {
+public:
+    Client(int port);
+    ~Client();
+    bool initialize();
+    int setMessage(SOCKET clientSocket, const std::string& message);
+    int run();
+    void stopServer();
+
+private:
+    bool sendMessage(SOCKET clientSocket, const std::string& message);
+    bool isAlive;
+    int port;
+    std::string message;
+    SOCKET serverSocket;
+    WSADATA wsaData;
+};
+
+int Client::setMessage(SOCKET clientSocket, const std::string& message) {
     if (send(clientSocket, message.c_str(), message.length(), 0) == SOCKET_ERROR) {
         std::cerr << "Erro ao enviar dados." << std::endl;
         closesocket(clientSocket);
@@ -18,14 +36,8 @@ int sendMessage(SOCKET clientSocket, const std::string& message) {
     return 0;
 }
 
-int main(int argc, char* argv[]) {
-    if (argc != 3) {
-        std::cerr << "Uso: " << argv[0] << " <IP do servidor> <porta>" << std::endl;
-        return 1;
-    }
+int Client::run(std::string serverIP, int port) {
 
-    std::string serverIP = argv[1];
-    int port = std::stoi(argv[2]);
     cout << "Endereço: " << serverIP << "/porta: " << port << endl;
 
     // Inicialização do Winsock
