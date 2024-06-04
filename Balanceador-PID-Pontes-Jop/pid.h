@@ -1,9 +1,9 @@
 #ifndef PID_H
 #define PID_H
-
 #include "utils.h"
+#include <inttypes.h>
 
-
+using namespace std;
 
 // Functions
 PID_t createPID(float Kp, float Ki, float Kd, uint16_t setpoint, bool mode,

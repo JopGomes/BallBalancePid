@@ -27,8 +27,10 @@ PID_t createPID(float _Kp, float _Ki, float _Kd,
 }
 
 
-Verts getCoordinatesFromAlphas(uint16_t alphaX , uint16_t alphaY){
+Verts getCoordinatesFromAlphas(uint16_t alphaXDegrees , uint16_t alphaYDegrees){
     Verts newVerts;
+    float alphaX = PI*(alphaXDegrees/180);
+    float alphaY = PI*(alphaYDegrees/180);
     newVerts.P1.R = 12*cos(alphaY) - 4*cos(alphaX);
     newVerts.P1.H = HEIGHT-8*sin(alphaY); // P11
     newVerts.P2.R = 8*cos(alphaX);
@@ -117,6 +119,7 @@ void PIDCompute(PID_t* pidX, PID_t* pidY, Ball_t ball, Serv* ang) {
     pidY->output[0] = saturationFilter(pidY->output[0], pidY->min, pidY->max);
 //===============================================================================
 
+    printf("pidX: %" PRIu16 ", pidY: %" PRIu16 " ", pidX->output[0], pidY->output[0]);
     Verts points = getCoordinatesFromAlphas(pidX->output[0],pidY->output[0]);
     ang->ang1 = coordinatesToBeta(points.P1);
     ang->ang2 = coordinatesToBeta(points.P2);

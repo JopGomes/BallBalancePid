@@ -24,56 +24,28 @@ Ball_t createBall(uint16_t _x, uint16_t _y){
 	return b;
 }
 
-int getWindowPos(cv::Point* point, cv::Mat mat){
-	char* ret __attribute__((unused));
-	const char* command = "xrandr | grep '*'";
- 	FILE* fpipe = (FILE*)popen(command,"r");
- 	char line[256];
-	memset(line, 0, sizeof(line));
- 	ret = fgets(line, sizeof(line), fpipe);
+int getWindowPos(cv::Point* point, cv::Mat mat) {
+  // Get screen resolution
+  DEVMODE displayMode;
+  EnumDisplaySettings(NULL, ENUM_CURRENT_SETTINGS, &displayMode);
+  int x_res = displayMode.dmPelsWidth;
+  int y_res = displayMode.dmPelsHeight;
 
-	int x_res = 0, y_res = 0, i = 0, start = 0, end = 0;
+  // Validate resolution
+  if (x_res < 360 || x_res > 4096 || y_res < 240 || y_res > 4096) {
+    fprintf(stderr, "Screen resolution wrong!\n");
+    return -1;
+  }
 
-	while(true){	//find x res
-		if(line[i] == ' '){
-			start = i+1;
-		}
-		if(line[i] == 'x'){
-			end = i;
-			char x_buf[end-start];
-			memset(x_buf, 0, sizeof(x_buf));
-			memcpy(x_buf, line+start, end-start);
-			x_res = atoi(x_buf);
-			break;
-		}
-		i++;
-	}
-	start = end+1;
-	while(true){	//find y res
-		if(line[i] == ' '){
-			end = i;
-			char y_buf[end-start];
-			memset(y_buf, 0, sizeof(y_buf));
-			memcpy(y_buf, line+start, end-start);
-			y_res = atoi(y_buf);
-			break;
-		}
-		i++;
-	}
- 	pclose(fpipe);
+  // Adjust minimum resolution
+  if (x_res < 720) x_res = 720;
+  if (y_res < 480) y_res = 480;
 
-	if(x_res<360||x_res>4096||y_res<240||y_res>4096){
-		fprintf(stderr, "Screen resolution wrong!\n");
-		return -1;
-	}
-	
-	if(x_res<720) x_res = 720;
-	if(y_res<480) x_res = 480;
+  // Calculate window position
+  point->x = (x_res - mat.cols) / 2;
+  point->y = (y_res - mat.rows) / 2;
 
-	point->x = (x_res - mat.cols) / 2;
-	point->y = (y_res - mat.rows) / 2;
-
-	return 0;
+  return 0;
 }
 
 void updateBall(Ball_t* b, uint16_t _x, uint16_t _y){
@@ -277,7 +249,7 @@ void trackFilteredObject(Ball_t* ball, Mat threshold){
 	float refArea = 0;
 
 	//find contours of filtered image using openCV findContours function
-	cv::findContours(threshold,contours,hierarchy,CV_RETR_CCOMP,CV_CHAIN_APPROX_SIMPLE );
+	cv::findContours(threshold,contours,hierarchy,cv::RETR_CCOMP, cv::CHAIN_APPROX_SIMPLE);
 
 	if (hierarchy.size() > 0) {
 		int numObjects = hierarchy.size();
@@ -321,7 +293,7 @@ void circleDetector(Mat cameraFeed, Mat threshold){
 	GaussianBlur( gray, gray, Size(7, 7), 1.8, 1.8 );
 
 	std::vector<Vec3f> circles;
-	HoughCircles(gray, circles, CV_HOUGH_GRADIENT, 1, 35, 100, 25, 10, 45);
+	HoughCircles(gray, circles, cv::HOUGH_GRADIENT, 1, 35, 100, 25, 10, 45);
 
 	for(size_t i = 0 ; i < circles.size() ; i++){
 		printf("%d    radius: %.1f \n", (int)i+1, circles[i][2]);
@@ -333,10 +305,4 @@ void circleDetector(Mat cameraFeed, Mat threshold){
 		circle( cameraFeed, center, radius+1, GREEN, 2, 8, 0 );  // circle outline
   	}
 	gray.release();
-}
-
-void drawLiveData(Mat &DATA, PID_t XPID, PID_t YPID){
-	putText(DATA, intToString(XPID.output[0]), cv::Point(5,25), 1, 2, BLUE, 2);
-	putText(DATA, intToString(YPID.output[0]), cv::Point(205,25), 1, 2, BLUE, 2);
-	//...
 }

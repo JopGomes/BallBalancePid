@@ -5,12 +5,15 @@
 #include <sstream>
 #include <cstdio>
 #include <cstring>
+#include <WinSock2.h>
 #include <windows.h>
 #include <cmath>
 #include <array>
+
 #include "utils.h"
 #include "client.h"
 #include "pid.h"
+
 
 using namespace cv;
 using namespace std;
@@ -22,7 +25,7 @@ int S_MAX = 256;
 int V_MIN = 0;
 int V_MAX = 256;
 
-const String serverIP = "x.x.x.x";
+const String serverIP = "192.168.0.142";
 const int port = 80;
 
 const String windowName = "Ball Balancing PID System";
@@ -340,7 +343,7 @@ void drawLiveData(Mat &DATA, PID_t XPID, PID_t YPID){
 	//...
 }
 
-std::string createStringFromServ(const Serv& serv) {
+String createStringFromServ(const Serv& serv) {
     std::ostringstream oss;
     oss << serv.ang1 << "/" << serv.ang2 << "/" << serv.ang3;
     return oss.str();
@@ -396,7 +399,7 @@ int main() {
         cvtColor(frame, HSV, COLOR_BGR2HSV);
 
         // Filtra a imagem HSV com base nos valores dos trackbars
-        inRange(HSV, Scalar(H_MIN, S_MIN, V_MIN), Scalar(H_MAX, S_MAX, V_MAX), threshold);
+        inRange(HSV, Scalar(H_MIN, 84, 40), Scalar(H_MAX, S_MAX, V_MAX), threshold);
         morphOps(threshold);
         trackFilteredObject(&ball, threshold);
 
@@ -406,7 +409,7 @@ int main() {
         // Exibe a imagem original e a imagem HSV filtrada
         imshow(windowName, frame);
         imshow(windowName2, threshold);
-
+        
         if(ball.detected){
             PIDCompute(&pidX, &pidY, ball, &ang);
             string message;
@@ -415,7 +418,7 @@ int main() {
             client.sendMessage(message);
             client.closeConnection();
         }
-
+        
         // Verifica se o usuário pressionou a tecla 'q' para sair
         if (waitKey(30) == 'q') {
             break;

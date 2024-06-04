@@ -2,11 +2,14 @@
 #ifndef TRACKER_H
 #define TRACKER_H
 
-#include <opencv2/opencv.hpp>
-#include <opencv2/highgui.hpp>
 
 #include "utils.h"
 #include "pid.h"
+
+#include <opencv2/opencv.hpp>
+#include <opencv2/highgui.hpp>
+#include <windows.h>
+
 
 using namespace cv;
 
@@ -58,8 +61,6 @@ void on_trackbar( int, void* );
 String intToString(int number);
 
 void createTrackbars();
-
-void createGainTrackbars(PID_t* XPID, PID_t* YPID);
 
 void drawObjectV2(Ball b, Mat &frame, bool noise_error);
 

@@ -4,8 +4,6 @@
 using namespace std;
 
 
-
-
 Client::Client(){
     if (WSAStartup(MAKEWORD(2, 2), &wsaData) != 0) {
         std::cerr << "Erro ao inicializar o Winsock." << std::endl;
@@ -54,4 +52,5 @@ bool Client::sendMessage(const std::string& message) {
 bool Client::closeConnection(){
     closesocket(clientSocket);
     WSACleanup();
+    return true;
 }
