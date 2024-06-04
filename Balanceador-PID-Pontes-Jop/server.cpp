@@ -6,21 +6,26 @@
 
 #pragma comment(lib, "ws2_32.lib")
 
+
 class Server {
 public:
     Server(int port);
     ~Server();
     bool initialize();
+    void setMessage(std::string message);
     void run();
+    void stopServer();
 
 private:
     bool sendMessage(SOCKET clientSocket, const std::string& message);
+    bool isAlive;
     int port;
+    std::string message;
     SOCKET serverSocket;
     WSADATA wsaData;
 };
 
-Server::Server(int port) : port(port), serverSocket(INVALID_SOCKET) {}
+Server::Server(int port) : isAlive(false),port(port),message("x/y/z\n"), serverSocket(INVALID_SOCKET) {}
 
 Server::~Server() {
     closesocket(serverSocket);
@@ -60,17 +65,22 @@ bool Server::initialize() {
     }
 
     std::cout << "Servidor em escuta na porta " << port << std::endl;
+    this->isAlive = true;
     return true;
 }
 
+void Server::setMessage(std::string message){
+    this->message = message;
+}
+
 void Server::run() {
-    while (true) {
+    while(this->isAlive){
         sockaddr_in clientAddr;
         int clientAddrSize = sizeof(clientAddr);
         SOCKET clientSocket = accept(serverSocket, reinterpret_cast<SOCKADDR*>(&clientAddr), &clientAddrSize);
         if (clientSocket == INVALID_SOCKET) {
             std::cerr << "Erro ao aceitar conexão do cliente." << std::endl;
-            continue;
+            return;
         }
 
         std::cout << "Cliente conectado." << std::endl;
@@ -83,7 +93,7 @@ void Server::run() {
             std::cout << "Solicitação do cliente: " << request << std::endl;
 
             if (request == "angles\n") {
-                std::string response = "x/y/z\n";
+                std::string response = this->message;
                 if (sendMessage(clientSocket, response)) {
                     std::cerr << "Erro ao enviar resposta para o cliente." << std::endl;
                 } else {
