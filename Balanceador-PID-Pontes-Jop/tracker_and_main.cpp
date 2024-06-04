@@ -10,8 +10,6 @@
 #include <array>
 #include "utils.h"
 
-
-
 using namespace cv;
 using namespace std;
 
@@ -26,27 +24,12 @@ const String windowName = "Ball Balancing PID System";
 const String windowName2 = "HSV view";
 const String trackbarWindowName = "HSV Trackbars";
 
-
-struct Ball_t {
-    bool detected;
-    int x[8], y[8];
-    int dx[8], dy[8];
-    int smooth_dx, smooth_dy;
-};
-
-
-
-#define SETPOINT_X 320
-#define SETPOINT_Y 240
-#define CONTROL_AREA 400
 #define FRAME_WIDTH 640
 #define FRAME_HEIGHT 480
 #define MIN_OBJECT_AREA 20*20
 #define MAX_OBJECT_AREA FRAME_HEIGHT*FRAME_WIDTH/1.5
 #define MAX_NUM_OBJECTS 50
 #define N 3
-#define   X_HALF_ANGLE      23650
-#define   Y_HALF_ANGLE      24850
 
 // Cores
 const cv::Scalar RED = Scalar(0, 0, 255);
