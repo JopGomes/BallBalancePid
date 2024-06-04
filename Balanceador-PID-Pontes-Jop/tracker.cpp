@@ -1,19 +1,4 @@
-#include <opencv2/opencv.hpp>
-#include <iostream>
-#include <vector>
-#include <string>
-#include <sstream>
-#include <cstdio>
-#include <cstring>
-#include <windows.h>
-#include <cmath>
-#include <array>
-#include "utils.h"
-#include "client.h"
-#include "pid.h"
-
-using namespace cv;
-using namespace std;
+#include "tracker.h"
 
 int H_MIN = 0;
 int H_MAX = 256;
@@ -22,27 +7,9 @@ int S_MAX = 256;
 int V_MIN = 0;
 int V_MAX = 256;
 
-const String serverIP = "x.x.x.x";
-const int port = 80;
-
 const String windowName = "Ball Balancing PID System";
 const String windowName2 = "HSV view";
 const String trackbarWindowName = "HSV Trackbars";
-
-#define FRAME_WIDTH 640
-#define FRAME_HEIGHT 480
-#define MIN_OBJECT_AREA 20*20
-#define MAX_OBJECT_AREA FRAME_HEIGHT*FRAME_WIDTH/1.5
-#define MAX_NUM_OBJECTS 50
-#define N 3
-
-// Cores
-const cv::Scalar RED = Scalar(0, 0, 255);
-const cv::Scalar GREEN = Scalar(0, 255, 0);
-const cv::Scalar BLUE = Scalar(255, 0, 0);
-const cv::Scalar CYAN = Scalar(255, 255, 0);
-const cv::Scalar ORANGE = Scalar(0, 165, 255);
-const cv::Scalar DARK_GREEN = Scalar(0, 100, 0);
 
 Ball_t createBall(uint16_t _x, uint16_t _y){
 	Ball_t b = {
@@ -56,6 +23,59 @@ Ball_t createBall(uint16_t _x, uint16_t _y){
 	};
 	return b;
 }
+
+int getWindowPos(cv::Point* point, cv::Mat mat){
+	char* ret __attribute__((unused));
+	const char* command = "xrandr | grep '*'";
+ 	FILE* fpipe = (FILE*)popen(command,"r");
+ 	char line[256];
+	memset(line, 0, sizeof(line));
+ 	ret = fgets(line, sizeof(line), fpipe);
+
+	int x_res = 0, y_res = 0, i = 0, start = 0, end = 0;
+
+	while(true){	//find x res
+		if(line[i] == ' '){
+			start = i+1;
+		}
+		if(line[i] == 'x'){
+			end = i;
+			char x_buf[end-start];
+			memset(x_buf, 0, sizeof(x_buf));
+			memcpy(x_buf, line+start, end-start);
+			x_res = atoi(x_buf);
+			break;
+		}
+		i++;
+	}
+	start = end+1;
+	while(true){	//find y res
+		if(line[i] == ' '){
+			end = i;
+			char y_buf[end-start];
+			memset(y_buf, 0, sizeof(y_buf));
+			memcpy(y_buf, line+start, end-start);
+			y_res = atoi(y_buf);
+			break;
+		}
+		i++;
+	}
+ 	pclose(fpipe);
+
+	if(x_res<360||x_res>4096||y_res<240||y_res>4096){
+		fprintf(stderr, "Screen resolution wrong!\n");
+		return -1;
+	}
+	
+	if(x_res<720) x_res = 720;
+	if(y_res<480) x_res = 480;
+
+	point->x = (x_res - mat.cols) / 2;
+	point->y = (y_res - mat.rows) / 2;
+
+	return 0;
+}
+
 void updateBall(Ball_t* b, uint16_t _x, uint16_t _y){
 	//update X position
 	b->x[7] = b->x[6];
@@ -107,30 +127,6 @@ void updateBall(Ball_t* b, uint16_t _x, uint16_t _y){
 		(N * (b->smooth_dy) - b->dy[N] + b->dy[0]) / N;
 }
 
-int getWindowPos(cv::Point* point, cv::Mat mat) {
-  // Get screen resolution
-  DEVMODE displayMode;
-  EnumDisplaySettings(NULL, ENUM_CURRENT_SETTINGS, &displayMode);
-  int x_res = displayMode.dmPelsWidth;
-  int y_res = displayMode.dmPelsHeight;
-
-  // Validate resolution
-  if (x_res < 360 || x_res > 4096 || y_res < 240 || y_res > 4096) {
-    fprintf(stderr, "Screen resolution wrong!\n");
-    return -1;
-  }
-
-  // Adjust minimum resolution
-  if (x_res < 720) x_res = 720;
-  if (y_res < 480) y_res = 480;
-
-  // Calculate window position
-  point->x = (x_res - mat.cols) / 2;
-  point->y = (y_res - mat.rows) / 2;
-
-  return 0;
-}
-
 void on_trackbar( int, void* ){
 	//empty function
 }
@@ -163,19 +159,7 @@ void createTrackbars(){
     createTrackbar( "V_MAX", trackbarWindowName, &V_MAX, V_MAX, on_trackbar );
 }
 
-inline void plotPos(Ball_t b, Mat &frame, uint16_t x, uint16_t y){
-	putText(frame, "X", cv::Point(x+5, y-120), 1, 1, DARK_GREEN , 2);
-	putText(frame, "Y", cv::Point(x+5, y+80), 1, 1, DARK_GREEN , 2);
-	line(frame, cv::Point(x, y-100), cv::Point(x+200, y-100), CYAN, 2);
-	line(frame, cv::Point(x, y+100), cv::Point(x+200, y+100), CYAN, 2);
 
-	for(int i=1 ; i<8 ; i++){
-		line(frame, cv::Point(x+i*10, (y-100+(b.x[i-1]-SETPOINT_X)/3)),
-			cv::Point(x+i*20, (y-100+(b.x[i]-SETPOINT_X)/3)), DARK_GREEN, 2);
-		line(frame, cv::Point(x+i*10, (y+100+(b.y[i-1]-SETPOINT_Y)/3)),
-			cv::Point(x+i*20, (y+100+(b.y[i]-SETPOINT_Y)/3)), DARK_GREEN, 2);
-	}
-}
 void drawObjectV2(Ball_t ball, Mat &frame, bool noise_error){
 
 	if(noise_error){	//////////////////////////////////////
@@ -243,6 +227,22 @@ void drawObjectV2(Ball_t ball, Mat &frame, bool noise_error){
 	return;
 
 }
+
+inline void plotPos(Ball_t b, Mat &frame, uint16_t x, uint16_t y){
+	putText(frame, "X", cv::Point(x+5, y-120), 1, 1, DARK_GREEN , 2);
+	putText(frame, "Y", cv::Point(x+5, y+80), 1, 1, DARK_GREEN , 2);
+	line(frame, cv::Point(x, y-100), cv::Point(x+200, y-100), CYAN, 2);
+	line(frame, cv::Point(x, y+100), cv::Point(x+200, y+100), CYAN, 2);
+
+	for(int i=1 ; i<8 ; i++){
+		line(frame, cv::Point(x+i*10, (y-100+(b.x[i-1]-SETPOINT_X)/3)),
+			cv::Point(x+i*20, (y-100+(b.x[i]-SETPOINT_X)/3)), DARK_GREEN, 2);
+		line(frame, cv::Point(x+i*10, (y+100+(b.y[i-1]-SETPOINT_Y)/3)),
+			cv::Point(x+i*20, (y+100+(b.y[i]-SETPOINT_Y)/3)), DARK_GREEN, 2);
+	}
+}
+
+
 void morphOps(Mat &thresh){
 
 	//the kernel chosen here is a 5px by 5px square
@@ -265,6 +265,7 @@ void morphOps(Mat &thresh){
 	dilateElement.release();
 }
 
+
 void trackFilteredObject(Ball_t* ball, Mat threshold){
 	//bool noise_error = false;
 
@@ -276,7 +277,7 @@ void trackFilteredObject(Ball_t* ball, Mat threshold){
 	float refArea = 0;
 
 	//find contours of filtered image using openCV findContours function
-	cv::findContours(threshold,contours,hierarchy, cv::RETR_CCOMP, cv::CHAIN_APPROX_SIMPLE);
+	cv::findContours(threshold,contours,hierarchy,CV_RETR_CCOMP,CV_CHAIN_APPROX_SIMPLE );
 
 	if (hierarchy.size() > 0) {
 		int numObjects = hierarchy.size();
@@ -289,8 +290,8 @@ void trackFilteredObject(Ball_t* ball, Mat threshold){
                 if(area>MIN_OBJECT_AREA && area<MAX_OBJECT_AREA && area>refArea){
 					if(ball->detected){
 						//circleDetector(cameraFeed, threshold);
-						updateBall(ball,(moment.m10/area), 
-										(moment.m01/area));
+						updateBall(ball,(moment.m10/area)+(FRAME_WIDTH-CONTROL_AREA)/2, 
+										(moment.m01/area)+(FRAME_HEIGHT-CONTROL_AREA)/2);
 						refArea = area;
 					}
 					else {
@@ -320,7 +321,7 @@ void circleDetector(Mat cameraFeed, Mat threshold){
 	GaussianBlur( gray, gray, Size(7, 7), 1.8, 1.8 );
 
 	std::vector<Vec3f> circles;
-	HoughCircles(gray, circles, cv::HOUGH_GRADIENT, 1, 35, 100, 25, 10, 45);
+	HoughCircles(gray, circles, CV_HOUGH_GRADIENT, 1, 35, 100, 25, 10, 45);
 
 	for(size_t i = 0 ; i < circles.size() ; i++){
 		printf("%d    radius: %.1f \n", (int)i+1, circles[i][2]);
@@ -339,92 +340,3 @@ void drawLiveData(Mat &DATA, PID_t XPID, PID_t YPID){
 	putText(DATA, intToString(YPID.output[0]), cv::Point(205,25), 1, 2, BLUE, 2);
 	//...
 }
-
-std::string createStringFromServ(const Serv& serv) {
-    std::ostringstream oss;
-    oss << serv.ang1 << "/" << serv.ang2 << "/" << serv.ang3;
-    return oss.str();
-}
-
-int main() {
-    Client client;
-    // Inicialização da câmera
-    VideoCapture cap(0); 
-
-    if (!cap.isOpened()) { // Verifica se a câmera foi aberta corretamente
-        std::cerr << "Erro ao abrir a câmera!" << std::endl;
-        return -1;
-    }
-    cap.set(cv::CAP_PROP_FRAME_WIDTH, 640);
-    cap.set(cv::CAP_PROP_FRAME_HEIGHT, 480);
-    // Criação das janelas
-    namedWindow(windowName);
-    namedWindow(windowName2);
-
-    createTrackbars();
-
-    // Variáveis de imagem
-    Mat frame, HSV, threshold;
-    Ball_t ball;
-    ball.detected = false;
-    
-    // Posição da janela
-    cv::Point windowPos;
-    if (getWindowPos(&windowPos, frame) != 0) {
-        std::cerr << "Erro ao obter a posição da janela!" << std::endl;
-        return -1;
-    }
-    moveWindow(windowName, windowPos.x, windowPos.y);
-    moveWindow(windowName2, windowPos.x + frame.cols, windowPos.y);
-    
-    //////////////////////     PID     ////////////////////////
-    PID_t pidX = createPID(KPx,KIx,KLx,SETPOINT_X, true, X_MIN_ANGLE, X_MAX_ANGLE);
-    PID_t pidY = createPID(KPy,KIy,KLy,SETPOINT_Y, false, Y_MIN_ANGLE, Y_MAX_ANGLE);
-
-    Serv ang;
-
-    //////////////////////     Loop principal     //////////////////////
-    while (true) {
-        cap >> frame; // Captura um frame da câmera
-
-        if (frame.empty()) {
-            std::cerr << "Frame vazio!" << std::endl;
-            break;
-        }
-
-        // Converte a imagem para o espaço de cores HSV
-        cvtColor(frame, HSV, COLOR_BGR2HSV);
-
-        // Filtra a imagem HSV com base nos valores dos trackbars
-        inRange(HSV, Scalar(H_MIN, S_MIN, V_MIN), Scalar(H_MAX, S_MAX, V_MAX), threshold);
-        morphOps(threshold);
-        trackFilteredObject(&ball, threshold);
-
-        // Desenha o objeto rastreado na imagem original
-        drawObjectV2(ball, frame, false);
-
-        // Exibe a imagem original e a imagem HSV filtrada
-        imshow(windowName, frame);
-        imshow(windowName2, threshold);
-
-        if(ball.detected){
-            PIDCompute(&pidX, &pidY, ball, &ang);
-            string message;
-            message = createStringFromServ(ang);
-            client.initialize(serverIP,port);
-            client.sendMessage(message);
-            client.closeConnection();
-        }
-
-        // Verifica se o usuário pressionou a tecla 'q' para sair
-        if (waitKey(30) == 'q') {
-            break;
-        }
-    }
-
-    // Libera as janelas
-    destroyAllWindows();
-
-    return 0;
-}
-

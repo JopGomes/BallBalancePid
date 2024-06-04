@@ -5,7 +5,8 @@
             "includePath": [
                 "${workspaceFolder}/**",
                 "C:/Users/Joseph/Documents/ESTUDOS/IME_GRADUACAO/IME_2024/SistEmbarcados/BallBalancePid/Ball-Balancing-PID-System-master/pid",
-                "C:/local/Boost/boost_1_79_0"
+                "C:/local/Boost/boost_1_79_0",
+                "C:\\Users\\rafae\\Documents\\opencv\\install\\include"
             ],
             "defines": [
                 "_DEBUG",
