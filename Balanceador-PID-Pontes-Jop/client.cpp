@@ -1,30 +1,15 @@
-#include <iostream>
-#include <cstring>
-#include <WinSock2.h>
-#include <WS2tcpip.h>
-#include <string>
-#include <windows.h> // For Sleep function
-#include "pid.h"
+#include "client.h"
 
 #pragma comment(lib, "ws2_32.lib")
 using namespace std;
 
 
-class Client {
-public:
-    Client();
-    ~Client();
-    bool initialize(std::string serverIP,int port);
-    void run(int x, int y);
-    bool sendMessage(SOCKET serverSocket, const std::string& message);
 
-private:
-    std::string message;
-    SOCKET clientSocket;
-    WSADATA wsaData;
-};
 
 Client::Client(){
+    if (WSAStartup(MAKEWORD(2, 2), &wsaData) != 0) {
+        std::cerr << "Erro ao inicializar o Winsock." << std::endl;
+    }
     clientSocket = socket(AF_INET, SOCK_STREAM, IPPROTO_TCP);
     if (clientSocket == INVALID_SOCKET) {
         std::cerr << "Erro ao criar o socket." << std::endl;
@@ -39,9 +24,7 @@ Client::~Client() {
 }
 
 bool Client::initialize(std::string serverIP,int port){
-    if (WSAStartup(MAKEWORD(2, 2), &wsaData) != 0) {
-        std::cerr << "Erro ao inicializar o Winsock." << std::endl;
-    }
+
     // Configuração do endereço do servidor
     sockaddr_in serverAddr;
     serverAddr.sin_family = AF_INET;
@@ -58,13 +41,17 @@ bool Client::initialize(std::string serverIP,int port){
     return true;
 }
 
-bool Client::sendMessage(SOCKET serverSocket, const std::string& message) {
-    if (send(serverSocket, message.c_str(), message.length(), 0) == SOCKET_ERROR) {
+bool Client::sendMessage(const std::string& message) {
+    if (send(clientSocket, message.c_str(), message.length(), 0) == SOCKET_ERROR) {
         std::cerr << "Erro ao enviar dados." << std::endl;
-        closesocket(serverSocket);
+        closesocket(clientSocket);
         WSACleanup();
         return false;
     }
     return true;
 }
 
+bool Client::closeConnection(){
+    closesocket(clientSocket);
+    WSACleanup();
+}
