@@ -21,11 +21,13 @@ int main(){
 
     Serv ang;
     while(true){
-        Ball_t ball; // recebe a bola
+        Ball_t ball; //espera receber a bola
+        client.initialize(serverIP,port);
         PIDCompute(&pidX, &pidY, ball, &ang);
         std::string message;
         message = createStringFromServ(ang);
         client.sendMessage(message);
+        client.closeConnection();
     }
 
 }
