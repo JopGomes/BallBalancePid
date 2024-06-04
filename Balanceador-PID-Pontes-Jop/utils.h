@@ -61,6 +61,11 @@ typedef struct Verts {
     Pair P3;
 } Verts;
 
+typedef struct Serv {
+    double ang1; // P11
+    double ang2; // P9
+    double ang3; // P10
+} Serv;
 
 //_ Global Variables _______________________
 
@@ -93,6 +98,16 @@ typedef struct Verts {
 #define L1 4.0
 #define L2 5.5
 #define HEIGHT sqrt(2)/2*(pow(L1,2) +sqrt(2*pow(L2,2) - pow(L1,2))); 
+
+
+#define KPx 16.0
+#define KLx 1.6
+#define KIx 11.0
+
+#define KPy 16.0
+#define KLy 1.6
+#define KIy 11.0
+
 /*===============================================*/
 
 #endif

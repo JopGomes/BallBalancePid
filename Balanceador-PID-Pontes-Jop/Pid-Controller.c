@@ -1,5 +1,6 @@
 
 #include "utils.h"
+#include "pid.h"
 
 
 PID_t createPID(float _Kp, float _Ki, float _Kd,
@@ -26,28 +27,27 @@ PID_t createPID(float _Kp, float _Ki, float _Kd,
 }
 
 
-
-
-
-Verts getCoordinatesFromAlphas(int alphax , int alphay){
+Verts getCoordinatesFromAlphas(uint16_t alphaX , uint16_t alphaY){
     Verts newVerts;
-    newVerts.P1.R = 12*cos(alphay) - 4*cos(alphax);
-    newVerts.P1.H = HEIGHT-8*sin(alphay); // P11
-    newVerts.P2.R = 8*cos(alphax);
-    newVerts.P2.H = HEIGHT+4*sin(alphay)-4*sqrt(3)*sin(alphax); // P9
-    newVerts.P3.R = 8*cos(alphax),HEIGHT;
-    newVerts.P3.H = 4*sin(alphay)+4*sqrt(3)*sin(alphax); // P10
+    newVerts.P1.R = 12*cos(alphaY) - 4*cos(alphaX);
+    newVerts.P1.H = HEIGHT-8*sin(alphaY); // P11
+    newVerts.P2.R = 8*cos(alphaX);
+    newVerts.P2.H = HEIGHT+4*sin(alphaY)-4*sqrt(3)*sin(alphaX); // P9
+    newVerts.P3.R = 8*cos(alphaX),HEIGHT;
+    newVerts.P3.H = 4*sin(alphaY)+4*sqrt(3)*sin(alphaX); // P10
     return newVerts;
 }
 
-int coordinatesToBeta(float R, float H){
+int coordinatesToBeta(Pair p){
+    float H = p.H;
+    float R = p.R;
 	double betaRadian = asin((pow(H,2) + pow((8-R),2) + pow(L1,2)-pow(L2,2))/(2*L1*sqrt(pow(H,2)+pow((8-R),2)))) - asin((8-R)/(sqrt(pow(H,2)+pow((8-R),2))));
 	int betaDegrees = round(betaRadian*(180/PI));
 	return betaDegrees;
 }
 
 
-void PIDCompute(PID_t* pidX, PID_t* pidY, Ball_t ball) {
+void PIDCompute(PID_t* pidX, PID_t* pidY, Ball_t ball, Serv* ang) {
 
 /*=================================================================================*/
 /*      X axis     */ 
@@ -116,6 +116,12 @@ void PIDCompute(PID_t* pidX, PID_t* pidY, Ball_t ball) {
     pidY->output[0] = saturationFilter(pidY->output[0], pidY->output[1]-filter_value, pidY->output[1]+filter_value);
     pidY->output[0] = saturationFilter(pidY->output[0], pidY->min, pidY->max);
 //===============================================================================
+
+    Verts points = getCoordinatesFromAlphas(pidX->output[0],pidY->output[0]);
+    ang->ang1 = coordinatesToBeta(points.P1);
+    ang->ang2 = coordinatesToBeta(points.P2);
+    ang->ang3 = coordinatesToBeta(points.P3);
+
 }
 
 inline short saturationFilter(short value , short T_MIN, short T_MAX){
