@@ -14,15 +14,11 @@ class Client {
 public:
     Client();
     ~Client();
-    bool initialize(std::string serverIP);
-    void setMessage(std::string message);
-    void run();
-    void stopServer();
+    bool initialize(std::string serverIP,int port);
+    void run(int x, int y);
+    bool sendMessage(SOCKET serverSocket, const std::string& message);
 
 private:
-    bool sendMessage(SOCKET serverSocket, const std::string& message);
-    bool isAlive;
-    int port;
     std::string message;
     SOCKET clientSocket;
     WSADATA wsaData;
@@ -42,7 +38,7 @@ Client::~Client() {
     
 }
 
-bool Client::initialize(std::string serverIP){
+bool Client::initialize(std::string serverIP,int port){
     if (WSAStartup(MAKEWORD(2, 2), &wsaData) != 0) {
         std::cerr << "Erro ao inicializar o Winsock." << std::endl;
     }
@@ -72,8 +68,3 @@ bool Client::sendMessage(SOCKET serverSocket, const std::string& message) {
     return true;
 }
 
-void Client::run() {
-
-    int c;
-    
-}
