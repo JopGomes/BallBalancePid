@@ -27,25 +27,28 @@ PID_t createPID(float _Kp, float _Ki, float _Kd,
 }
 
 
-Verts getCoordinatesFromAlphas(uint16_t alphaXDegrees , uint16_t alphaYDegrees){
+Verts getCoordinatesFromAlphas(int8_t alphaXDegrees , int8_t alphaYDegrees){
     Verts newVerts;
-    float alphaX = PI*(alphaXDegrees/180);
-    float alphaY = PI*(alphaYDegrees/180);
+    float alphaX = PI*(1.0*alphaXDegrees/180);
+    float alphaY = PI*(1.0*alphaYDegrees/180);
+    
     newVerts.P1.R = 12*cos(alphaY) - 4*cos(alphaX);
-    newVerts.P1.H = HEIGHT-8*sin(alphaY); // P11
+    newVerts.P1.H = 1.0*HEIGHT- 8.0*sin(alphaY); // P11
     newVerts.P2.R = 8*cos(alphaX);
-    newVerts.P2.H = HEIGHT+4*sin(alphaY)-4*sqrt(3)*sin(alphaX); // P9
-    newVerts.P3.R = 8*cos(alphaX),HEIGHT;
-    newVerts.P3.H = 4*sin(alphaY)+4*sqrt(3)*sin(alphaX); // P10
+    newVerts.P2.H = 1.0*HEIGHT+4*sin(alphaY)-4*sqrt(3)*sin(alphaX); // P9
+    newVerts.P3.R = 8*cos(alphaX);
+    newVerts.P3.H = 1.0*HEIGHT+ 4*sin(alphaY)+4*sqrt(3)*sin(alphaX); // P10
     return newVerts;
 }
 
 int coordinatesToBeta(Pair p){
     float H = p.H;
     float R = p.R;
-	double betaRadian = asin((pow(H,2) + pow((8-R),2) + pow(L1,2)-pow(L2,2))/(2*L1*sqrt(pow(H,2)+pow((8-R),2)))) - asin((8-R)/(sqrt(pow(H,2)+pow((8-R),2))));
-	int betaDegrees = round(betaRadian*(180/PI));
-	return 180 - betaDegrees;
+	float betaRadian = asin((pow(H,2) + pow((8.0-R),2) + pow(L1,2)-pow(L2,2))/(2.0*L1*sqrt(pow(H,2)+pow((8.0-R),2)))) - asin((8.0-R)/(sqrt(pow(H,2)+pow((8.0-R),2))));
+    int16_t betaDegrees = round(betaRadian*(180/PI));
+    if (betaDegrees < 10) betaDegrees = 10;
+    if(betaDegrees > 80 ) betaDegrees = 80;
+	return (180 - betaDegrees);
 }
 
 
@@ -118,9 +121,8 @@ Serv PIDCompute(PID_t* pidX, PID_t* pidY, Ball_t ball,int k) {
     pidY->output[0] = saturationFilter(pidY->output[0], pidY->output[1]-filter_value, pidY->output[1]+filter_value);
     pidY->output[0] = saturationFilter(pidY->output[0], pidY->min, pidY->max);
 //===============================================================================
-    int pidX_var = pidX->output[0] - 60;
-    int pidY_var = pidY->output[0] - 60;
-    printf("pidX: %d, pidY: %d ", pidX_var, pidY_var);
+    int8_t pidX_var = pidX->output[0] - 60;
+    int8_t pidY_var = pidY->output[0] - 60;
     Serv ang;
     Verts points = getCoordinatesFromAlphas(k*pidX_var/10,k*pidY_var/10);
     ang.ang1 = coordinatesToBeta(points.P1);

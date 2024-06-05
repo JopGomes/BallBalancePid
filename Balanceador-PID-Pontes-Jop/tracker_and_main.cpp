@@ -13,6 +13,7 @@
 #include "utils.h"
 #include "client.h"
 #include "pid.h"
+#include "server.h"
 
 
 using namespace cv;
@@ -27,6 +28,7 @@ int V_MAX = 256;
 
 const String serverIP = "192.168.0.142";
 const int port = 80;
+bool isAlive = true;
 
 const String windowName = "Ball Balancing PID System";
 const String windowName2 = "HSV view";
@@ -344,13 +346,18 @@ void drawLiveData(Mat &DATA, PID_t XPID, PID_t YPID){
 }
 
 String createStringFromServ(const Serv& serv) {
-    std::ostringstream oss;
-    oss << serv.ang1 << "/" << serv.ang2 << "/" << serv.ang3;
-    return oss.str();
+    String dados =  to_string(serv.ang1)+"/" +to_string(serv.ang2)+"/"+to_string(serv.ang3)+"\n";
+    //cout << dados <<endl;
+    return dados;
+}
+
+void servidor(Server server){
+    if (server.initialize()) {
+        server.run();
+    }
 }
 
 int main() {
-    Client client;
     // Inicialização da câmera
     VideoCapture cap(0); 
 
@@ -384,6 +391,9 @@ int main() {
     PID_t pidX = createPID(KPx,KIx,KLx,SETPOINT_X, true, X_MIN_ANGLE, X_MAX_ANGLE);
     PID_t pidY = createPID(KPy,KIy,KLy,SETPOINT_Y, false, Y_MIN_ANGLE, Y_MAX_ANGLE);
 
+    //int port = 80;
+    //Server server(port);
+    //std::thread minhaThread(servidor,server);
 
     //////////////////////     Loop principal     //////////////////////
     while (true) {
@@ -412,6 +422,7 @@ int main() {
         if(ball.detected){
             Serv ang = PIDCompute(&pidX, &pidY, ball,k);
             string message;
+            Client client;
             message = createStringFromServ(ang);
             client.initialize(serverIP,port);
             client.sendMessage(message);
@@ -423,6 +434,8 @@ int main() {
             break;
         }
     }
+    //server.stopServer();
+    //minhaThread.join();
 
     // Libera as janelas
     destroyAllWindows();

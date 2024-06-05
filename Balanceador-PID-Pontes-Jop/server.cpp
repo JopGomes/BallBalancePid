@@ -1,11 +1,4 @@
-#include <iostream>
-#include <cstring>
-#include <WinSock2.h>
-#include <WS2tcpip.h>
-#include <string>
-
-#pragma comment(lib, "ws2_32.lib")
-
+#include "server.h"
 
 class Server {
 public:
@@ -30,6 +23,9 @@ Server::Server(int port) : isAlive(false),port(port),message("x/y/z\n"), serverS
 Server::~Server() {
     closesocket(serverSocket);
     WSACleanup();
+}
+void Server::stopServer(){
+    this->isAlive = false;
 }
 
 bool Server::initialize() {

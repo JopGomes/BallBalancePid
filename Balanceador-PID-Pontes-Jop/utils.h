@@ -62,16 +62,16 @@ typedef struct Verts {
 } Verts;
 
 typedef struct Serv {
-    double ang1; // P11
-    double ang2; // P9
-    double ang3; // P10
+    int16_t ang1; // P11
+    int16_t ang2; // P9
+    int16_t ang3; // P10
 } Serv;
 
 //_ Global Variables _______________________
 
 /*===============================================*/
 /*ABOUT SERVOS*/
-#define   ANGLE_OFFSET      50
+#define   ANGLE_OFFSET      30
 
 #define   X_HALF_ANGLE      60
 #define	  X_MAX_ANGLE       X_HALF_ANGLE+ANGLE_OFFSET
@@ -97,7 +97,7 @@ typedef struct Serv {
 
 #define L1 4.0
 #define L2 5.5
-#define HEIGHT sqrt(2)/2*(pow(L1,2) +sqrt(2*pow(L2,2) - pow(L1,2))); 
+#define HEIGHT 7.54 
 
 /*===============================================*/
 /*ABOUT PID*/
