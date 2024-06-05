@@ -71,13 +71,13 @@ typedef struct Serv {
 
 /*===============================================*/
 /*ABOUT SERVOS*/
-#define   ANGLE_OFFSET      5900
+#define   ANGLE_OFFSET      35
 
-#define   X_HALF_ANGLE      23650
+#define   X_HALF_ANGLE      135
 #define	  X_MAX_ANGLE       X_HALF_ANGLE+ANGLE_OFFSET
 #define   X_MIN_ANGLE       X_HALF_ANGLE-ANGLE_OFFSET
 
-#define   Y_HALF_ANGLE      24850
+#define   Y_HALF_ANGLE      135
 #define	  Y_MAX_ANGLE       Y_HALF_ANGLE+ANGLE_OFFSET
 #define   Y_MIN_ANGLE       Y_HALF_ANGLE-ANGLE_OFFSET
 
@@ -102,13 +102,13 @@ typedef struct Serv {
 /*===============================================*/
 /*ABOUT PID*/
 
-#define KPx 16.0
-#define KLx 1.6
-#define KIx 11.0
+#define KPx 0.1
+#define KLx 0.01
+#define KIx 0.063
 
-#define KPy 16.0
-#define KLy 1.6
-#define KIy 11.0
+#define KPy 0.1
+#define KLy 0.01
+#define KIy 0.063
 
 /*===============================================*/
 /*ABOUT Socket*/
