@@ -9,6 +9,7 @@
 #include <windows.h>
 #include <cmath>
 #include <array>
+#include<thread>
 
 #include "utils.h"
 #include "client.h"
@@ -351,7 +352,7 @@ String createStringFromServ(const Serv& serv) {
     return dados;
 }
 
-void servidor(Server server){
+void servidor(Server& server){
     if (server.initialize()) {
         server.run();
     }
@@ -391,9 +392,9 @@ int main() {
     PID_t pidX = createPID(KPx,KIx,KLx,SETPOINT_X, true, X_MIN_ANGLE, X_MAX_ANGLE);
     PID_t pidY = createPID(KPy,KIy,KLy,SETPOINT_Y, false, Y_MIN_ANGLE, Y_MAX_ANGLE);
 
-    //int port = 80;
-    //Server server(port);
-    //std::thread minhaThread(servidor,server);
+    int port = 80;
+    Server server(port);
+    std::thread minhaThread(servidor,std::ref(server));
 
     //////////////////////     Loop principal     //////////////////////
     while (true) {
@@ -422,11 +423,12 @@ int main() {
         if(ball.detected){
             Serv ang = PIDCompute(&pidX, &pidY, ball,k);
             string message;
-            Client client;
+            //Client client;
             message = createStringFromServ(ang);
-            client.initialize(serverIP,port);
-            client.sendMessage(message);
-            client.closeConnection();
+            server.setMessage(message);
+            //client.initialize(serverIP,port);
+            //client.sendMessage(message);
+            //client.closeConnection();
         }
         
         // Verifica se o usuário pressionou a tecla 'q' para sair
@@ -434,8 +436,8 @@ int main() {
             break;
         }
     }
-    //server.stopServer();
-    //minhaThread.join();
+    server.stopServer();
+    minhaThread.join();
 
     // Libera as janelas
     destroyAllWindows();

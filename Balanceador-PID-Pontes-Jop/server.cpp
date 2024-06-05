@@ -1,24 +1,6 @@
 #include "server.h"
 
-class Server {
-public:
-    Server(int port);
-    ~Server();
-    bool initialize();
-    void setMessage(std::string message);
-    void run();
-    void stopServer();
-
-private:
-    bool sendMessage(SOCKET clientSocket, const std::string& message);
-    bool isAlive;
-    int port;
-    std::string message;
-    SOCKET serverSocket;
-    WSADATA wsaData;
-};
-
-Server::Server(int port) : isAlive(false),port(port),message("x/y/z\n"), serverSocket(INVALID_SOCKET) {}
+Server::Server(int port) : isAlive(false),port(port),message("135/135/135\n"), serverSocket(INVALID_SOCKET) {}
 
 Server::~Server() {
     closesocket(serverSocket);
@@ -92,8 +74,10 @@ void Server::run() {
                 std::string response = this->message;
                 if (sendMessage(clientSocket, response)) {
                     std::cerr << "Erro ao enviar resposta para o cliente." << std::endl;
+                    std::cout<<response<<endl;
                 } else {
                     std::cout << "Resposta enviada para o cliente." << std::endl;
+                    std::cout<<response<<endl;
                 }
             }
         }
@@ -110,13 +94,4 @@ bool Server::sendMessage(SOCKET clientSocket, const std::string& message) {
         return false;
     }
     return true;
-}
-
-int main() {
-    int port = 80;
-    Server server(port);
-    if (server.initialize()) {
-        server.run();
-    }
-    return 0;
 }
