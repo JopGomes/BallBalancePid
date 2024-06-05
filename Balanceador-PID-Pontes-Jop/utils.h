@@ -71,13 +71,13 @@ typedef struct Serv {
 
 /*===============================================*/
 /*ABOUT SERVOS*/
-#define   ANGLE_OFFSET      35
+#define   ANGLE_OFFSET      50
 
-#define   X_HALF_ANGLE      135
+#define   X_HALF_ANGLE      60
 #define	  X_MAX_ANGLE       X_HALF_ANGLE+ANGLE_OFFSET
 #define   X_MIN_ANGLE       X_HALF_ANGLE-ANGLE_OFFSET
 
-#define   Y_HALF_ANGLE      135
+#define   Y_HALF_ANGLE      60
 #define	  Y_MAX_ANGLE       Y_HALF_ANGLE+ANGLE_OFFSET
 #define   Y_MIN_ANGLE       Y_HALF_ANGLE-ANGLE_OFFSET
 

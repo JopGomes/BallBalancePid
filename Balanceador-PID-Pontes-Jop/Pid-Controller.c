@@ -45,11 +45,11 @@ int coordinatesToBeta(Pair p){
     float R = p.R;
 	double betaRadian = asin((pow(H,2) + pow((8-R),2) + pow(L1,2)-pow(L2,2))/(2*L1*sqrt(pow(H,2)+pow((8-R),2)))) - asin((8-R)/(sqrt(pow(H,2)+pow((8-R),2))));
 	int betaDegrees = round(betaRadian*(180/PI));
-	return betaDegrees;
+	return 180 - betaDegrees;
 }
 
 
-void PIDCompute(PID_t* pidX, PID_t* pidY, Ball_t ball, Serv* ang) {
+Serv PIDCompute(PID_t* pidX, PID_t* pidY, Ball_t ball,int k) {
 
 /*=================================================================================*/
 /*      X axis     */ 
@@ -118,12 +118,15 @@ void PIDCompute(PID_t* pidX, PID_t* pidY, Ball_t ball, Serv* ang) {
     pidY->output[0] = saturationFilter(pidY->output[0], pidY->output[1]-filter_value, pidY->output[1]+filter_value);
     pidY->output[0] = saturationFilter(pidY->output[0], pidY->min, pidY->max);
 //===============================================================================
-
-    printf("pidX: %" PRIu16 ", pidY: %" PRIu16 " ", pidX->output[0], pidY->output[0]);
-    Verts points = getCoordinatesFromAlphas(pidX->output[0],pidY->output[0]);
-    ang->ang1 = coordinatesToBeta(points.P1);
-    ang->ang2 = coordinatesToBeta(points.P2);
-    ang->ang3 = coordinatesToBeta(points.P3);
+    int pidX_var = pidX->output[0] - 60;
+    int pidY_var = pidY->output[0] - 60;
+    printf("pidX: %d, pidY: %d ", pidX_var, pidY_var);
+    Serv ang;
+    Verts points = getCoordinatesFromAlphas(k*pidX_var/10,k*pidY_var/10);
+    ang.ang1 = coordinatesToBeta(points.P1);
+    ang.ang2 = coordinatesToBeta(points.P2);
+    ang.ang3 = coordinatesToBeta(points.P3);
+    return ang;
 
 }
 

@@ -384,7 +384,6 @@ int main() {
     PID_t pidX = createPID(KPx,KIx,KLx,SETPOINT_X, true, X_MIN_ANGLE, X_MAX_ANGLE);
     PID_t pidY = createPID(KPy,KIy,KLy,SETPOINT_Y, false, Y_MIN_ANGLE, Y_MAX_ANGLE);
 
-    Serv ang;
 
     //////////////////////     Loop principal     //////////////////////
     while (true) {
@@ -409,9 +408,9 @@ int main() {
         // Exibe a imagem original e a imagem HSV filtrada
         imshow(windowName, frame);
         imshow(windowName2, threshold);
-        
+        int k =10;
         if(ball.detected){
-            PIDCompute(&pidX, &pidY, ball, &ang);
+            Serv ang = PIDCompute(&pidX, &pidY, ball,k);
             string message;
             message = createStringFromServ(ang);
             client.initialize(serverIP,port);
