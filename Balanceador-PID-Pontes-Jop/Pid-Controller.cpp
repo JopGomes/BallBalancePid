@@ -120,7 +120,7 @@ double pixel_to_cm = 20.0/404;
     //std::cout << pidX->output[0]<< " " << pidY->output[0]<<"\n" << std::endl;
     for (int i = 0; i < 3; i++) {
       //printf("%lf ang\n", machine.theta(i, 7.54, -pidX->output[0], -pidY->output[0]));
-      pos[i] = round((machine.theta(i, 7.54, -pidX->output[0], -pidY->output[0])) );
+      pos[i] = round((machine.theta(i, 7.54, -pidX->output[0], pidY->output[0])) );
     }
     ang.ang1 = pos[0];
     ang.ang2 = pos[1];

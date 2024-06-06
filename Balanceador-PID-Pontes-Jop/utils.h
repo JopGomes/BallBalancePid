@@ -73,6 +73,7 @@ typedef struct Serv {
 
 /*===============================================*/
 /*ABOUT SERVOS*/
+
 #define   ANGLE_OFFSET      20
 
 #define   ANGLE_ORIGIN      135

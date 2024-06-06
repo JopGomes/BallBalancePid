@@ -27,6 +27,8 @@ int S_MIN = 89;
 int S_MAX = 256;
 int V_MIN = 240;
 int V_MAX = 256;
+
+/// configuration fase;
 int KP_value = 1;
 int KP_MAX = 100;
 int KI_value = 1;
@@ -34,7 +36,13 @@ int KI_MAX = 100;
 int KD_value = 1;
 int KD_MAX = 100;
 int limites_value = 1;
-int limites_max = 400;
+int limites_max = 100;
+int servo1_offset_value = 0;
+int servo1_offset_max = 100;
+int servo2_offset_value = 0;
+int servo2_offset_max = 100;
+int servo3_offset_value = 0;
+int servo3_offset_max = 100;
 
 const String serverIP = "192.168.0.142";
 const int port = 80;
@@ -171,7 +179,7 @@ void createTrackbars(){
 	sprintf( TrackbarName, "V_MAX");
 
 
-	namedWindow("Constantes", 1);
+	namedWindow("Configuration", 1);
 	char TrackbarNameC[16];
 	sprintf( TrackbarNameC, "KP");
 	sprintf( TrackbarNameC, "KI");
@@ -184,10 +192,15 @@ void createTrackbars(){
     createTrackbar( "S_MAX", trackbarWindowName, &S_MAX, S_MAX, on_trackbar );
     createTrackbar( "V_MIN", trackbarWindowName, &V_MIN, V_MAX, on_trackbar );
     createTrackbar( "V_MAX", trackbarWindowName, &V_MAX, V_MAX, on_trackbar );
-	createTrackbar( "KP", "Constantes", &KP_value, KP_MAX, on_trackbar);
-	createTrackbar( "KI", "Constantes", &KI_value, KI_MAX, on_trackbar);
-	createTrackbar( "KD", "Constantes", &KD_value, KD_MAX, on_trackbar);
-	createTrackbar( "Limites", "Constantes", &limites_value, limites_max, on_trackbar);
+	
+	/////configuration fase
+	createTrackbar( "KP", "Configuration", &KP_value, KP_MAX, on_trackbar);
+	createTrackbar( "KI", "Configuration", &KI_value, KI_MAX, on_trackbar);
+	createTrackbar( "KD", "Configuration", &KD_value, KD_MAX, on_trackbar);
+	createTrackbar( "Limites", "Configuration", &limites_value, limites_max, on_trackbar);
+	createTrackbar( "Servo1_offset", "Configuration", &servo1_offset_value, servo1_offset_max, on_trackbar);
+	createTrackbar( "Servo2_offset", "Configuration", &servo2_offset_value, servo2_offset_max, on_trackbar);
+	createTrackbar( "Servo3_offset", "Configuration", &servo3_offset_value, servo3_offset_max, on_trackbar);
 }
 
 inline void plotPos(Ball_t b, Mat &frame, uint16_t x, uint16_t y){
@@ -368,7 +381,7 @@ void drawLiveData(Mat &DATA, PID_t XPID, PID_t YPID){
 }
 
 String createStringFromServ(const Serv& serv) {
-    String dados =  to_string(serv.ang1)+"/" +to_string(serv.ang2)+"/"+to_string(serv.ang3)+"\n";
+    String dados =  to_string(serv.ang1)+"/" +to_string(serv.ang2)+"/"+to_string(serv.ang3-2)+"\n";
     cout << dados <<endl;
     return dados;
 }
@@ -378,11 +391,15 @@ void servidor(Server& server){
         server.run();
     }
 }
+float getValuesInRange(float begin, float end, float value){
+	value = begin + (end-begin)*value/100;
+	return value; 
+}
 
 void updatePID(PID_t* pidx, PID_t* pidy){
-	pidx->Kp = KP_value*1.0/100;
-	pidx->Ki = KI_value*1.0/100000;
-	pidx->Kd = KD_value*1.0/10;
+	pidx->Kp = getValuesInRange(0.0,0.02,KP_value);
+	pidx->Ki = getValuesInRange(0.0,0.001,KI_value); 
+	pidx->Kd = getValuesInRange(0.02,1.02,KD_value); 
 	pidy->Kp = pidx->Kp;
 	pidy->Ki = pidx->Ki;
 	pidy->Kd = pidx->Kd;
@@ -424,7 +441,7 @@ int main() {
     //////////////////////     PID     /////////////////////////////////////////////
     PID_t pidX = createPID(KPx,KIx,KDx,SETPOINT_X, false, X_MIN_ANGLE, X_MAX_ANGLE);
     PID_t pidY = createPID(KPy,KIy,KDy,SETPOINT_Y, false, Y_MIN_ANGLE, Y_MAX_ANGLE);
-	Machine machine(8.5, 8.0, 4.0, 5.5);
+	Machine machine(8.0, 8.0, 4.0, 5.5);
 
 
 
@@ -455,15 +472,18 @@ int main() {
         if(ball.detected){
 			updatePID(&pidX,&pidY);
             Serv ang = PIDCompute(&pidX, &pidY, ball,limites_value,machine);
-            string message;
+			ang.ang1 += servo1_offset_value;
+			ang.ang2 += servo1_offset_value;
+			ang.ang3 += servo3_offset_value;
+			string message;
             message = createStringFromServ(ang);
             server.setMessage(message);
         }
 		else{
 			Serv ang;
-			ang.ang1= ANGLE_ORIGIN;
-			ang.ang2 = ANGLE_ORIGIN;
-			ang.ang3 = ANGLE_ORIGIN;
+			ang.ang1= ANGLE_ORIGIN+servo1_offset_value;
+			ang.ang2 = ANGLE_ORIGIN+servo1_offset_value;
+			ang.ang3 = ANGLE_ORIGIN+servo3_offset_value;
 			string message;
             message = createStringFromServ(ang);
             server.setMessage(message);
