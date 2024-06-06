@@ -380,12 +380,12 @@ void servidor(Server& server){
 }
 
 void updatePID(PID_t* pidx, PID_t* pidy){
-	pidx->Kp = KP_value/100;
-	pidx->Ki = KI_value/100000;
-	pidx->Kd = KD_value/10;
-	pidy->Kp = KP_value/100;
-	pidy->Ki = KI_value/100000;
-	pidy->Kd = KD_value/10;
+	pidx->Kp = KP_value*1.0/100;
+	pidx->Ki = KI_value*1.0/100000;
+	pidx->Kd = KD_value*1.0/10;
+	pidy->Kp = pidx->Kp;
+	pidy->Ki = pidx->Ki;
+	pidy->Kd = pidx->Kd;
 }
 
 int main() {
