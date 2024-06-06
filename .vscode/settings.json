@@ -112,6 +112,7 @@
         "xtr1common": "cpp",
         "xtree": "cpp",
         "xutility": "cpp",
-        "stdlib.h": "c"
+        "stdlib.h": "c",
+        "inversekinematics.h": "c"
     }
 }

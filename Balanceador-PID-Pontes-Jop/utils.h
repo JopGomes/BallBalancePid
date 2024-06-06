@@ -10,6 +10,8 @@
 #include <math.h>
 #include <errno.h>
 #include <string.h>
+#include <ostream>
+#include <iostream>
 
 #define     bool        int
 #define     false       0
@@ -18,11 +20,11 @@
 typedef struct PID_t{
     float Kp, Ki, Kd;
     uint16_t setpoint;
-    short error[2];
+    float error[2];
     float dt;
-    uint16_t output[2];
+    float output[2];
     float P, I, D;
-    short integral;
+    float integral;
     uint16_t min, max;
     bool inverted_mode;
 }PID_t;
@@ -62,16 +64,18 @@ typedef struct Verts {
 } Verts;
 
 typedef struct Serv {
-    int16_t ang1; // P11
-    int16_t ang2; // P9
-    int16_t ang3; // P10
+    uint8_t ang1; // P11
+    uint8_t ang2; // P9
+    uint8_t ang3; // P10
 } Serv;
 
 //_ Global Variables _______________________
 
 /*===============================================*/
 /*ABOUT SERVOS*/
-#define   ANGLE_OFFSET      30
+#define   ANGLE_OFFSET      20
+
+#define   ANGLE_ORIGIN      135
 
 #define   X_HALF_ANGLE      60
 #define	  X_MAX_ANGLE       X_HALF_ANGLE+ANGLE_OFFSET
@@ -98,17 +102,19 @@ typedef struct Serv {
 #define L1 4.0
 #define L2 5.5
 #define HEIGHT 7.54 
+#define CORNER_BASE 8
+#define CORNER_PLATFORM 8
 
 /*===============================================*/
 /*ABOUT PID*/
 
-#define KPx 0.1
-#define KLx 0.01
-#define KIx 0.063
+#define KPx 1e-2
+#define KDx 7e-1
+#define KIx 1e-4
 
-#define KPy 0.1
-#define KLy 0.01
-#define KIy 0.063
+#define KPy KPx
+#define KDy KDx
+#define KIy KIx
 
 /*===============================================*/
 /*ABOUT Socket*/

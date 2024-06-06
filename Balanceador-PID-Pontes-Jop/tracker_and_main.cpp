@@ -15,6 +15,7 @@
 #include "client.h"
 #include "pid.h"
 #include "server.h"
+#include "InverseKinematics.h"
 
 
 using namespace cv;
@@ -22,10 +23,18 @@ using namespace std;
 
 int H_MIN = 0;
 int H_MAX = 256;
-int S_MIN = 0;
+int S_MIN = 89;
 int S_MAX = 256;
-int V_MIN = 0;
+int V_MIN = 240;
 int V_MAX = 256;
+int KP_value = 1;
+int KP_MAX = 100;
+int KI_value = 1;
+int KI_MAX = 100;
+int KD_value = 1;
+int KD_MAX = 100;
+int limites_value = 1;
+int limites_max = 400;
 
 const String serverIP = "192.168.0.142";
 const int port = 80;
@@ -161,12 +170,24 @@ void createTrackbars(){
 	sprintf( TrackbarName, "V_MIN");
 	sprintf( TrackbarName, "V_MAX");
 
+
+	namedWindow("Constantes", 1);
+	char TrackbarNameC[16];
+	sprintf( TrackbarNameC, "KP");
+	sprintf( TrackbarNameC, "KI");
+	sprintf( TrackbarNameC, "KD");
+	sprintf( TrackbarNameC, "Limites");
+
     createTrackbar( "H_MIN", trackbarWindowName, &H_MIN, H_MAX, on_trackbar );
     createTrackbar( "H_MAX", trackbarWindowName, &H_MAX, H_MAX, on_trackbar );
     createTrackbar( "S_MIN", trackbarWindowName, &S_MIN, S_MAX, on_trackbar );
     createTrackbar( "S_MAX", trackbarWindowName, &S_MAX, S_MAX, on_trackbar );
     createTrackbar( "V_MIN", trackbarWindowName, &V_MIN, V_MAX, on_trackbar );
     createTrackbar( "V_MAX", trackbarWindowName, &V_MAX, V_MAX, on_trackbar );
+	createTrackbar( "KP", "Constantes", &KP_value, KP_MAX, on_trackbar);
+	createTrackbar( "KI", "Constantes", &KI_value, KI_MAX, on_trackbar);
+	createTrackbar( "KD", "Constantes", &KD_value, KD_MAX, on_trackbar);
+	createTrackbar( "Limites", "Constantes", &limites_value, limites_max, on_trackbar);
 }
 
 inline void plotPos(Ball_t b, Mat &frame, uint16_t x, uint16_t y){
@@ -348,7 +369,7 @@ void drawLiveData(Mat &DATA, PID_t XPID, PID_t YPID){
 
 String createStringFromServ(const Serv& serv) {
     String dados =  to_string(serv.ang1)+"/" +to_string(serv.ang2)+"/"+to_string(serv.ang3)+"\n";
-    //cout << dados <<endl;
+    cout << dados <<endl;
     return dados;
 }
 
@@ -358,8 +379,17 @@ void servidor(Server& server){
     }
 }
 
+void updatePID(PID_t* pidx, PID_t* pidy){
+	pidx->Kp = KP_value/100;
+	pidx->Ki = KI_value/100000;
+	pidx->Kd = KD_value/10;
+	pidy->Kp = KP_value/100;
+	pidy->Ki = KI_value/100000;
+	pidy->Kd = KD_value/10;
+}
+
 int main() {
-    // Inicialização da câmera
+    ////////////////////////   tracker   ///////////////////////////////////
     VideoCapture cap(0); 
 
     if (!cap.isOpened()) { // Verifica se a câmera foi aberta corretamente
@@ -374,12 +404,10 @@ int main() {
 
     createTrackbars();
 
-    // Variáveis de imagem
     Mat frame, HSV, threshold;
     Ball_t ball;
     ball.detected = false;
     
-    // Posição da janela
     cv::Point windowPos;
     if (getWindowPos(&windowPos, frame) != 0) {
         std::cerr << "Erro ao obter a posição da janela!" << std::endl;
@@ -388,13 +416,17 @@ int main() {
     moveWindow(windowName, windowPos.x, windowPos.y);
     moveWindow(windowName2, windowPos.x + frame.cols, windowPos.y);
     
-    //////////////////////     PID     ////////////////////////
-    PID_t pidX = createPID(KPx,KIx,KLx,SETPOINT_X, true, X_MIN_ANGLE, X_MAX_ANGLE);
-    PID_t pidY = createPID(KPy,KIy,KLy,SETPOINT_Y, false, Y_MIN_ANGLE, Y_MAX_ANGLE);
-
-    int port = 80;
+	//////////////////////    server    ////////////////////////////////////////
+	int port = 80;
     Server server(port);
     std::thread minhaThread(servidor,std::ref(server));
+
+    //////////////////////     PID     /////////////////////////////////////////////
+    PID_t pidX = createPID(KPx,KIx,KDx,SETPOINT_X, false, X_MIN_ANGLE, X_MAX_ANGLE);
+    PID_t pidY = createPID(KPy,KIy,KDy,SETPOINT_Y, false, Y_MIN_ANGLE, Y_MAX_ANGLE);
+	Machine machine(8.5, 8.0, 4.0, 5.5);
+
+
 
     //////////////////////     Loop principal     //////////////////////
     while (true) {
@@ -409,7 +441,7 @@ int main() {
         cvtColor(frame, HSV, COLOR_BGR2HSV);
 
         // Filtra a imagem HSV com base nos valores dos trackbars
-        inRange(HSV, Scalar(H_MIN, 84, 40), Scalar(H_MAX, S_MAX, V_MAX), threshold);
+        inRange(HSV, Scalar(H_MIN, S_MIN, V_MIN), Scalar(H_MAX, S_MAX, V_MAX), threshold);
         morphOps(threshold);
         trackFilteredObject(&ball, threshold);
 
@@ -419,27 +451,32 @@ int main() {
         // Exibe a imagem original e a imagem HSV filtrada
         imshow(windowName, frame);
         imshow(windowName2, threshold);
-        int k =10;
+
         if(ball.detected){
-            Serv ang = PIDCompute(&pidX, &pidY, ball,k);
+			updatePID(&pidX,&pidY);
+            Serv ang = PIDCompute(&pidX, &pidY, ball,limites_value,machine);
             string message;
-            //Client client;
             message = createStringFromServ(ang);
             server.setMessage(message);
-            //client.initialize(serverIP,port);
-            //client.sendMessage(message);
-            //client.closeConnection();
         }
+		else{
+			Serv ang;
+			ang.ang1= ANGLE_ORIGIN;
+			ang.ang2 = ANGLE_ORIGIN;
+			ang.ang3 = ANGLE_ORIGIN;
+			string message;
+            message = createStringFromServ(ang);
+            server.setMessage(message);
+		}
         
         // Verifica se o usuário pressionou a tecla 'q' para sair
         if (waitKey(30) == 'q') {
             break;
         }
     }
+	//////////////////// Fim do loop /////////////////////////////////
     server.stopServer();
     minhaThread.join();
-
-    // Libera as janelas
     destroyAllWindows();
 
     return 0;

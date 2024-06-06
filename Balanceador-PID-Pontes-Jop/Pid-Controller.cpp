@@ -1,6 +1,6 @@
 
-#include "utils.h"
 #include "pid.h"
+
 
 
 PID_t createPID(float _Kp, float _Ki, float _Kd,
@@ -25,6 +25,7 @@ PID_t createPID(float _Kp, float _Ki, float _Kd,
     };
     return pid;
 }
+
 
 
 Verts getCoordinatesFromAlphas(int8_t alphaXDegrees , int8_t alphaYDegrees){
@@ -52,39 +53,35 @@ int coordinatesToBeta(Pair p){
 }
 
 
-Serv PIDCompute(PID_t* pidX, PID_t* pidY, Ball_t ball,int k) {
+Serv PIDCompute(PID_t* pidX, PID_t* pidY, Ball_t ball,float limite, Machine machine) {
+
+double pixel_to_cm = 20.0/404;
+
 
 /*=================================================================================*/
 /*      X axis     */ 
 
-    //set old error and output
-    pidX->error[1] = pidX->error[0];
-    pidX->output[1] = pidX->output[0]; 
 
-    //compute new error
-    if (!pidX->inverted_mode) pidX->error[0] = pidX->setpoint - ball.x[0];
-    else pidX->error[0] = ball.x[0] - pidX->setpoint;
-
-    //Integral: update and filter
-    pidX->integral += pidX->error[0] * pidX->dt;
-    pidX->integral = saturationFilter(pidX->integral, -150, +150); 
-
-    //Derivative: Update and filter
-    ball.smooth_dx = saturationFilter(ball.smooth_dx, -150, +150);
-    if(!pidX->inverted_mode) ball.smooth_dx = -ball.smooth_dx;
     
-    //Calculate components PID
+    pidX->error[1] = pidX->error[0];
+    pidX->output[1] = pidX->output[0];
+
+    pidX->error[0] = ( (1.0*ball.x[0] - pidX->setpoint)*pixel_to_cm );
+
+    pidX->integral += pidX->error[0] + pidX->error[1];
+
+    
+    float derivate = (pidX->error[0]- pidX->error[1]);
+    derivate = isnan(derivate) ||isinf(derivate)? 0 : derivate;
+
     pidX->P = pidX->Kp * pidX->error[0];
     pidX->I = pidX->Ki * pidX->integral;
-    pidX->D = pidX->Kd * (ball.smooth_dx/pidX->dt);
+    pidX->D = pidX->Kd * derivate;
 
     //output
     pidX->output[0] =
-            X_HALF_ANGLE + pidX->P + pidX->I + pidX->D;
-
-     //output filter   
-    pidX->output[0] = saturationFilter(pidX->output[0], pidX->output[1]-1500, pidX->output[1]+1500);
-    pidX->output[0] = saturationFilter(pidX->output[0], pidX->min, pidX->max);
+             pidX->P + pidX->I + pidX->D;
+    
 
 
 /*=================================================================================*/
@@ -94,45 +91,45 @@ Serv PIDCompute(PID_t* pidX, PID_t* pidY, Ball_t ball,int k) {
     pidY->error[1] = pidY->error[0];
     pidY->output[1] = pidY->output[0]; 
 
-    //compute new error
-    if (!pidY->inverted_mode) pidY->error[0] = pidY->setpoint - ball.y[0];
-    else pidY->error[0] = ball.y[0] - pidY->setpoint;
+    // update erro 
+    pidY->error[0] =( (ball.y[0] - pidY->setpoint)*pixel_to_cm );
+    //cout << pidY->error[0]<< "erro\n"<< endl;
 
-    //Integral: update and filter
-    int filter_integral = 150;
-    pidY->integral += pidY->error[0] * pidY->dt;
-    pidY->integral = saturationFilter(pidY->integral, -filter_integral, +filter_integral); 
+    std::cout <<"erros: " <<pidX->error[0]<< " " << pidY->error[1]<<"\n" << std::endl;
+    //Integral: update
+    pidY->integral += pidY->error[0] + pidY->error[1];
 
     //Derivative: Update and filter
-    int filter_derivative = 150;
-    ball.smooth_dy = saturationFilter(ball.smooth_dy, -filter_derivative, +filter_derivative);
-    if(!pidY->inverted_mode) ball.smooth_dy = -ball.smooth_dy;
-    
+    derivate = (pidY->error[0]- pidY->error[1]);
+    derivate = isnan(derivate) ||isinf(derivate)? 0 : derivate;
+
     pidY->P = pidY->Kp * pidY->error[0];
     pidY->I = pidY->Ki * pidY->integral;
-    pidY->D = pidY->Kd * (ball.smooth_dy/pidY->dt);
+    pidY->D = pidY->Kd * derivate;
 
     //output
     pidY->output[0] =
-            Y_HALF_ANGLE + pidY->P + pidY->I + pidY->D;
+             pidY->P + pidY->I + pidY->D;
+    //std::cout << pidX->output[0]<< " " << pidY->output[0]<<"\n" << std::endl;
+//==============================================================================
+    pidX->output[0] = saturationFilter(pidX->output[0],-limite,limite);
+    pidY->output[0] = saturationFilter(pidY->output[0],-limite,limite);
     
-    //output filter 
-    int filter_value = 1500;
-    pidY->output[0] = saturationFilter(pidY->output[0], pidY->output[1]-filter_value, pidY->output[1]+filter_value);
-    pidY->output[0] = saturationFilter(pidY->output[0], pidY->min, pidY->max);
-//===============================================================================
-    int8_t pidX_var = pidX->output[0] - 60;
-    int8_t pidY_var = pidY->output[0] - 60;
     Serv ang;
-    Verts points = getCoordinatesFromAlphas(k*pidX_var/10,k*pidY_var/10);
-    ang.ang1 = coordinatesToBeta(points.P1);
-    ang.ang2 = coordinatesToBeta(points.P2);
-    ang.ang3 = coordinatesToBeta(points.P3);
+    uint8_t pos[3];
+    //std::cout << pidX->output[0]<< " " << pidY->output[0]<<"\n" << std::endl;
+    for (int i = 0; i < 3; i++) {
+      //printf("%lf ang\n", machine.theta(i, 7.54, -pidX->output[0], -pidY->output[0]));
+      pos[i] = round((machine.theta(i, 7.54, -pidX->output[0], -pidY->output[0])) );
+    }
+    ang.ang1 = pos[0];
+    ang.ang2 = pos[1];
+    ang.ang3 = pos[2];
     return ang;
 
 }
 
-inline short saturationFilter(short value , short T_MIN, short T_MAX){
+inline float saturationFilter(float value , float T_MIN, float T_MAX){
     if (value <= T_MIN) return T_MIN;
     if (value >= T_MAX) return T_MAX;
     else return value;
