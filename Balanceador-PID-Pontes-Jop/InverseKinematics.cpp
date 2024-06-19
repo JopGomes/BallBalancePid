@@ -27,8 +27,6 @@ double Machine::theta(int leg, float hz, float nx, float ny) {
   nx /= nmag;
   ny /= nmag;
   nz = 1 / nmag;
-  //std::cout << "nx: "<<nx<< " ny: "<<ny<< " nz: "<<nz<<std::endl;
-  //calculates angle A, B, or C
   switch (leg) {
     case A:  //Leg A
       y = d + (e / 2) * (1 - (pow(nx, 2) + 3 * pow(nz, 2) + 3 * nz) / (nz + 1 - pow(nx, 2) + (pow(nx, 4) - 3 * pow(nx, 2) * pow(ny, 2)) / ((nz + 1) * (nz + 1 - pow(nx, 2)))));
@@ -49,10 +47,8 @@ double Machine::theta(int leg, float hz, float nx, float ny) {
       z = hz + (e / 2) * (sqrt(3) * nx - ny);
       mag = sqrt(pow(x, 2) + pow(y, 2) + pow(z, 2));
       angle = acos((sqrt(3) * x - y) / (2 * mag)) + acos((pow(mag, 2) + pow(f, 2) - pow(g, 2)) / (2 * mag * f));
-      //std::cout<<"arcos: "<< (sqrt(3) * x - y) / (2 * mag) <<"/ arcos: "<<((pow(mag, 2) + pow(f, 2) - pow(g, 2)) / (2 * mag * f)) <<std::endl;
       break;
   }
-  //std::cout << "x : "<< x<<" y: "<<y<<" z: "<<z <<std::endl;
-  //std::cout << "angle : "<< (angle * (180.0 / PI))<<std::endl;
+
   return (angle * (180.0 / PI));  //converts angle to degrees and returns the value
 }

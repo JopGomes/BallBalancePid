@@ -10,34 +10,35 @@
 #include <cmath>
 #include <array>
 #include<thread>
+#include <chrono>
 
 #include "utils.h"
-#include "client.h"
+#include "httpServer.h"
 #include "pid.h"
-#include "server.h"
 #include "InverseKinematics.h"
+#include "sender.h"
 
 
 using namespace cv;
 using namespace std;
 
-int H_MIN = 0;
+int H_MIN = 79;
 int H_MAX = 256;
-int S_MIN = 89;
+int S_MIN = 124;
 int S_MAX = 256;
-int V_MIN = 240;
+int V_MIN = 0;
 int V_MAX = 256;
 
 /// configuration fase;
 int KP_value = 1;
 int KP_MAX = 100;
-int KI_value = 1;
+int KI_value = 0;
 int KI_MAX = 100;
-int KD_value = 1;
+int KD_value = 0;
 int KD_MAX = 100;
 int limites_value = 1;
 int limites_max = 100;
-int servo1_offset_value = 0;
+int servo1_offset_value = 2;
 int servo1_offset_max = 100;
 int servo2_offset_value = 0;
 int servo2_offset_max = 100;
@@ -45,8 +46,11 @@ int servo3_offset_value = 0;
 int servo3_offset_max = 100;
 
 const String serverIP = "192.168.0.142";
+VideoCapture cap(0);
 const int port = 80;
 bool isAlive = true;
+string pattern;
+long timeI, timeII;
 
 const String windowName = "Ball Balancing PID System";
 const String windowName2 = "HSV view";
@@ -159,7 +163,7 @@ void on_trackbar( int, void* ){
 }
 
 String intToString(int number){
-	std::stringstream ss;
+	stringstream ss;
 	ss << number;
 	return ss.str();
 }
@@ -309,8 +313,8 @@ void trackFilteredObject(Ball_t* ball, Mat threshold){
 	//bool noise_error = false;
 
 	//these two vectors needed for output of findContours
-	std::vector< std::vector<cv::Point> > contours;
-	std::vector<cv::Vec4i> hierarchy;
+	vector< vector<cv::Point> > contours;
+	vector<cv::Vec4i> hierarchy;
 
 	//use moments method to find our filtered object
 	float refArea = 0;
@@ -359,7 +363,7 @@ void circleDetector(Mat cameraFeed, Mat threshold){
 	//cvtColor(threshold, gray, CV_BGR2GRAY);
 	GaussianBlur( gray, gray, Size(7, 7), 1.8, 1.8 );
 
-	std::vector<Vec3f> circles;
+	vector<Vec3f> circles;
 	HoughCircles(gray, circles, cv::HOUGH_GRADIENT, 1, 35, 100, 25, 10, 45);
 
 	for(size_t i = 0 ; i < circles.size() ; i++){
@@ -382,35 +386,107 @@ void drawLiveData(Mat &DATA, PID_t XPID, PID_t YPID){
 
 String createStringFromServ(const Serv& serv) {
     String dados =  to_string(serv.ang1)+"/" +to_string(serv.ang2)+"/"+to_string(serv.ang3-2)+"\n";
-    cout << dados <<endl;
+    //cout << dados <<endl;
     return dados;
 }
 
-void servidor(Server& server){
-    if (server.initialize()) {
-        server.run();
-    }
-}
+
 float getValuesInRange(float begin, float end, float value){
-	value = begin + (end-begin)*value/100;
+	value = begin + (end-begin)*value/100*1.0;
+	cout<< value<< endl;
 	return value; 
 }
 
 void updatePID(PID_t* pidx, PID_t* pidy){
-	pidx->Kp = getValuesInRange(0.0,0.02,KP_value);
-	pidx->Ki = getValuesInRange(0.0,0.001,KI_value); 
-	pidx->Kd = getValuesInRange(0.02,1.02,KD_value); 
-	pidy->Kp = pidx->Kp;
-	pidy->Ki = pidx->Ki;
-	pidy->Kd = pidx->Kd;
+	float k1 = KDy/KDx;
+	float k2 = KIy/KIx;
+	pidx->Ki = KIx*getValuesInRange(0.0,1.5,KI_value); //1
+	pidx->Kd = KDx*getValuesInRange(0.0,1.5,KD_value); //1
+	pidy->Ki = k2*pidx->Ki;
+	pidy->Kd = k1*pidx->Kd;
 }
 
-int main() {
-    ////////////////////////   tracker   ///////////////////////////////////
-    VideoCapture cap(0); 
+float* getNextPosition(int& pos, vector<pair<float,float>> positions){
+	float* newPair = new float[2];
+	
+	pos = (pos+1)%positions.size();
+	newPair[0] = positions[pos].first;
+	newPair[1] = positions[pos].second;
+		
+	return newPair;
+}
+/*
+void servidor(httpServer& server){
+    if (server.start()) {
+        server.run(pattern);
+    }
+}*/
+vector<pair<float, float>> generateSquarePatter(int size){
+	vector<pair<float, float>> vec;
+	vec.push_back(make_pair(-size,size));
+	vec.push_back(make_pair(size,size));
+	vec.push_back(make_pair(size,-size));
+	vec.push_back(make_pair(-size,-size));
+	return vec;
+}
 
-    if (!cap.isOpened()) { // Verifica se a câmera foi aberta corretamente
-        std::cerr << "Erro ao abrir a câmera!" << std::endl;
+vector<pair<float, float>> generateTrianglePattern(int G){
+	vector<pair<float, float>> vec;
+  	vec.push_back(make_pair(0,G));
+	vec.push_back(make_pair(-sqrt(3)*G,-G/2));
+	vec.push_back(make_pair(sqrt(3)*G/2,-G/2));
+	return vec;
+}
+
+vector<pair<float, float>> generateLimniscatePattern(float r){
+	vector<pair<float, float>> vec;
+  	float start = 0;
+ 	double theta;
+  	double scale;
+  
+	theta = start;
+	for (double j = 0; j < 2 * PI; j += 0.05) {
+	  	scale = r * (2 / (3 - cos(2 * theta)));  //moves the ball
+		vec.push_back(make_pair(scale * cos(theta), scale * sin(2 * theta) / 1.5));  //(X setpoint, Y setpoint)
+	  	theta += start == 0 ? -0.05 : (start == -2 * PI ? 0.05 : 0);
+	}
+  
+	return vec;
+}
+
+
+void generatePatterns(map<string, vector<pair<float, float>>>& mapPatterns, map<string,int>& mapTemp){
+	vector<pair<float,float>> vecCenter = {make_pair(0.0,0.0)};
+	mapPatterns["center"] = vecCenter;
+	mapPatterns["square"] = generateSquarePatter(3);
+	mapPatterns["triangle"] = generateTrianglePattern(3);
+	mapPatterns["limniscate"] = generateLimniscatePattern(3);
+	mapTemp["center"] = 60;
+	mapTemp["square"] = 60;
+	mapTemp["triangle"] = 60;
+	mapTemp["limniscate"] = 60;
+}
+
+
+int main() {
+	Mat frame, HSV, threshold;
+    Ball_t ball;
+    ball.detected = false;
+	int posIndex = 0;
+	cv::Point windowPos;
+	int cyclesWithoutBall = 0;
+	int formatTemp = 0;
+	float *pos;
+	pos[0] = 0;
+	pos[1] = 0; 
+	map<string, vector<pair<float, float>>> mapPatterns;
+	map<string,int> mapTemp;
+	//////////////////////// generate patterns ////////////////////////////////////////////////////////////
+	generatePatterns(mapPatterns, mapTemp);
+
+    ////////////////////////   tracker   //////////////////////////////////////////////////////////////////
+    if (!cap.isOpened()) { 
+        cerr << "Erro ao abrir a câmera!" << endl;
         return -1;
     }
     cap.set(cv::CAP_PROP_FRAME_WIDTH, 640);
@@ -421,82 +497,92 @@ int main() {
 
     createTrackbars();
 
-    Mat frame, HSV, threshold;
-    Ball_t ball;
-    ball.detected = false;
     
-    cv::Point windowPos;
     if (getWindowPos(&windowPos, frame) != 0) {
-        std::cerr << "Erro ao obter a posição da janela!" << std::endl;
+        cerr << "Erro ao obter a posição da janela!" << endl;
         return -1;
     }
     moveWindow(windowName, windowPos.x, windowPos.y);
     moveWindow(windowName2, windowPos.x + frame.cols, windowPos.y);
     
-	//////////////////////    server    ////////////////////////////////////////
+	//////////////////////    server    //////////////////////////////////////////////////////////////
 	int port = 80;
-    Server server(port);
-    std::thread minhaThread(servidor,std::ref(server));
+    //httpServer server(port);
+    //thread minhaThread(servidor,ref(server));
+	const char* ip = "192.168.185.78"; // Substitua pelo IP do ESP32-CAM
 
-    //////////////////////     PID     /////////////////////////////////////////////
+    UDPSender sender(ip, 12345);
+
+    //////////////////////     PID     //////////////////////////////////////////////////////////////
     PID_t pidX = createPID(KPx,KIx,KDx,SETPOINT_X, false, X_MIN_ANGLE, X_MAX_ANGLE);
     PID_t pidY = createPID(KPy,KIy,KDy,SETPOINT_Y, false, Y_MIN_ANGLE, Y_MAX_ANGLE);
 	Machine machine(8.0, 8.0, 4.0, 5.5);
 
-
-
-    //////////////////////     Loop principal     //////////////////////
+    //////////////////////     Loop principal     ///////////////////////////////////////////////////////
     while (true) {
-        cap >> frame; // Captura um frame da câmera
+        cap >> frame; 
 
         if (frame.empty()) {
-            std::cerr << "Frame vazio!" << std::endl;
+            cerr << "Frame vazio!" << endl;
             break;
         }
 
-        // Converte a imagem para o espaço de cores HSV
         cvtColor(frame, HSV, COLOR_BGR2HSV);
 
-        // Filtra a imagem HSV com base nos valores dos trackbars
         inRange(HSV, Scalar(H_MIN, S_MIN, V_MIN), Scalar(H_MAX, S_MAX, V_MAX), threshold);
         morphOps(threshold);
         trackFilteredObject(&ball, threshold);
 
-        // Desenha o objeto rastreado na imagem original
         drawObjectV2(ball, frame, false);
 
-        // Exibe a imagem original e a imagem HSV filtrada
         imshow(windowName, frame);
         imshow(windowName2, threshold);
 
         if(ball.detected){
+			cyclesWithoutBall = 0;
+			formatTemp++;
+			if (formatTemp == mapTemp[pattern]){
+				pos = getNextPosition(ref(posIndex), mapPatterns[pattern]);
+				formatTemp = 0;
+			}
 			updatePID(&pidX,&pidY);
-            Serv ang = PIDCompute(&pidX, &pidY, ball,limites_value,machine);
+
+            Serv ang = PIDCompute(&pidX, &pidY, ball,pos[0], pos[1], limites_value,machine);
 			ang.ang1 += servo1_offset_value;
-			ang.ang2 += servo1_offset_value;
+			ang.ang2 += servo2_offset_value;
 			ang.ang3 += servo3_offset_value;
+
 			string message;
             message = createStringFromServ(ang);
-            server.setMessage(message);
+			sender.sendString(message);
         }
 		else{
-			Serv ang;
-			ang.ang1= ANGLE_ORIGIN+servo1_offset_value;
-			ang.ang2 = ANGLE_ORIGIN+servo1_offset_value;
-			ang.ang3 = ANGLE_ORIGIN+servo3_offset_value;
-			string message;
-            message = createStringFromServ(ang);
-            server.setMessage(message);
+			formatTemp = 0;
+			pos[0] = 0;
+			pos[1] = 0; 
+			if (cyclesWithoutBall < 10){
+				cyclesWithoutBall++;
+			}
+			if (cyclesWithoutBall == 10) {
+				cyclesWithoutBall++;
+				Serv ang;
+				pidX.integral = 0;
+				pidY.integral = 0;
+				ang.ang1= ANGLE_ORIGIN+servo1_offset_value;
+				ang.ang2 = ANGLE_ORIGIN+servo2_offset_value;
+				ang.ang3 = ANGLE_ORIGIN+servo3_offset_value;
+				string message;
+				message = createStringFromServ(ang);
+				sender.sendString(message);
+			}
 		}
         
-        // Verifica se o usuário pressionou a tecla 'q' para sair
         if (waitKey(30) == 'q') {
             break;
         }
     }
-	//////////////////// Fim do loop /////////////////////////////////
-    server.stopServer();
-    minhaThread.join();
+	//server.stopServer();
+    //minhaThread.join();
     destroyAllWindows();
 
     return 0;

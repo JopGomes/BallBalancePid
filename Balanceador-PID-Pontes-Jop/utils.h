@@ -109,16 +109,12 @@ typedef struct Serv {
 /*===============================================*/
 /*ABOUT PID*/
 
-#define KPx 1e-2
-#define KDx 7e-1
-#define KIx 1e-4
+#define KPx 0.00624
+#define KDx 0.117
+#define KIx 0.0000832
 
 #define KPy KPx
-#define KDy KDx
-#define KIy KIx
-
-/*===============================================*/
-/*ABOUT Socket*/
-
+#define KDy 0.133
+#define KIy 0.000073
 
 #endif

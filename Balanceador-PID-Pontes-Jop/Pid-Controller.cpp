@@ -53,9 +53,9 @@ int coordinatesToBeta(Pair p){
 }
 
 
-Serv PIDCompute(PID_t* pidX, PID_t* pidY, Ball_t ball,float limite, Machine machine) {
+Serv PIDCompute(PID_t* pidX, PID_t* pidY, Ball_t ball,float setpointX, float setpointY, float limite, Machine machine) {
 
-double pixel_to_cm = 20.0/404;
+float pixel_to_cm = 20.0/404;
 
 
 /*=================================================================================*/
@@ -66,7 +66,9 @@ double pixel_to_cm = 20.0/404;
     pidX->error[1] = pidX->error[0];
     pidX->output[1] = pidX->output[0];
 
-    pidX->error[0] = ( (1.0*ball.x[0] - pidX->setpoint)*pixel_to_cm );
+    pidX->error[0] = ( (ball.x[0] - pidX->setpoint)*pixel_to_cm + setpointX*1.0); 
+    cout<<"ball x: "<<(ball.x[0] )*pixel_to_cm<<endl;
+    cout<<"ball y: "<<ball.y[0]*pixel_to_cm<<endl;
 
     pidX->integral += pidX->error[0] + pidX->error[1];
 
@@ -92,10 +94,10 @@ double pixel_to_cm = 20.0/404;
     pidY->output[1] = pidY->output[0]; 
 
     // update erro 
-    pidY->error[0] =( (ball.y[0] - pidY->setpoint)*pixel_to_cm );
+    pidY->error[0] =( (ball.y[0] -pidY->setpoint)*pixel_to_cm + setpointY*1.0);
     //cout << pidY->error[0]<< "erro\n"<< endl;
 
-    std::cout <<"erros: " <<pidX->error[0]<< " " << pidY->error[1]<<"\n" << std::endl;
+    //std::cout <<"erros: " <<pidX->error[0]<< " " << pidY->error[1]<<"\n" << std::endl;
     //Integral: update
     pidY->integral += pidY->error[0] + pidY->error[1];
 
