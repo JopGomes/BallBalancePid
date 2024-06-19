@@ -1,9 +1,6 @@
-// udp_sender.cpp
-
 #include "sender.h"
 
 UDPSender::UDPSender(const char* ip, int port) {
-    // Inicializa o Winsock
     WSADATA wsaData;
     int iResult = WSAStartup(MAKEWORD(2, 2), &wsaData);
     if (iResult != 0) {
@@ -11,7 +8,6 @@ UDPSender::UDPSender(const char* ip, int port) {
         exit(1);
     }
 
-    // Cria o socket
     SendSocket = socket(AF_INET, SOCK_DGRAM, IPPROTO_UDP);
     if (SendSocket == INVALID_SOCKET) {
         std::cerr << "socket failed: " << WSAGetLastError() << std::endl;
@@ -19,14 +15,12 @@ UDPSender::UDPSender(const char* ip, int port) {
         exit(1);
     }
 
-    // Configura o endereço do destinatário
     recvAddr.sin_family = AF_INET;
     recvAddr.sin_port = htons(port);
     inet_pton(AF_INET, ip, &recvAddr.sin_addr);
 }
 
 UDPSender::~UDPSender() {
-    // Limpa
     closesocket(SendSocket);
     WSACleanup();
 }

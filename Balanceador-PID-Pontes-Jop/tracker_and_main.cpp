@@ -22,19 +22,19 @@
 using namespace cv;
 using namespace std;
 
-int H_MIN = 79;
+int H_MIN = 82;
 int H_MAX = 256;
-int S_MIN = 124;
+int S_MIN = 103;
 int S_MAX = 256;
 int V_MIN = 0;
 int V_MAX = 256;
 
-/// configuration fase;
+//////////// constants definition /////////////
 int KP_value = 1;
 int KP_MAX = 100;
-int KI_value = 0;
+int KI_value = 17;
 int KI_MAX = 100;
-int KD_value = 0;
+int KD_value = 71;
 int KD_MAX = 100;
 int limites_value = 1;
 int limites_max = 100;
@@ -49,7 +49,7 @@ const String serverIP = "192.168.0.142";
 VideoCapture cap(0);
 const int port = 80;
 bool isAlive = true;
-string pattern;
+string pattern = "center";
 long timeI, timeII;
 
 const String windowName = "Ball Balancing PID System";
@@ -63,7 +63,6 @@ const String trackbarWindowName = "HSV Trackbars";
 #define MAX_NUM_OBJECTS 50
 #define N 3
 
-// Cores
 const cv::Scalar RED = Scalar(0, 0, 255);
 const cv::Scalar GREEN = Scalar(0, 255, 0);
 const cv::Scalar BLUE = Scalar(255, 0, 0);
@@ -169,11 +168,8 @@ String intToString(int number){
 }
 
 void createTrackbars(){
-
-	//create window for trackbars
     namedWindow(trackbarWindowName, 0);
 
-	//create memory to store trackbar name on window
 	char TrackbarName[16];
 	sprintf( TrackbarName, "H_MIN");
 	sprintf( TrackbarName, "H_MAX");
@@ -301,22 +297,13 @@ void morphOps(Mat &thresh){
 	cv::dilate(thresh,thresh,dilateElement);
 	cv::dilate(thresh,thresh,dilateElement);
 
-	//close = erode + dilate
-	//cv::morphologyEx(thresh, thresh, MORPH_CLOSE, Mat::ones(5, 5, CV_8U)); 
-
-	//release
 	erodeElement.release();
 	dilateElement.release();
 }
 
 void trackFilteredObject(Ball_t* ball, Mat threshold){
-	//bool noise_error = false;
-
-	//these two vectors needed for output of findContours
 	vector< vector<cv::Point> > contours;
 	vector<cv::Vec4i> hierarchy;
-
-	//use moments method to find our filtered object
 	float refArea = 0;
 
 	//find contours of filtered image using openCV findContours function
@@ -360,7 +347,6 @@ void circleDetector(Mat cameraFeed, Mat threshold){
 
 	Mat gray;
 	threshold.copyTo(gray);
-	//cvtColor(threshold, gray, CV_BGR2GRAY);
 	GaussianBlur( gray, gray, Size(7, 7), 1.8, 1.8 );
 
 	vector<Vec3f> circles;
@@ -390,7 +376,6 @@ String createStringFromServ(const Serv& serv) {
     return dados;
 }
 
-
 float getValuesInRange(float begin, float end, float value){
 	value = begin + (end-begin)*value/100*1.0;
 	cout<< value<< endl;
@@ -415,12 +400,12 @@ float* getNextPosition(int& pos, vector<pair<float,float>> positions){
 		
 	return newPair;
 }
-/*
+
 void servidor(httpServer& server){
     if (server.start()) {
         server.run(pattern);
     }
-}*/
+}
 vector<pair<float, float>> generateSquarePatter(int size){
 	vector<pair<float, float>> vec;
 	vec.push_back(make_pair(-size,size));
@@ -433,7 +418,7 @@ vector<pair<float, float>> generateSquarePatter(int size){
 vector<pair<float, float>> generateTrianglePattern(int G){
 	vector<pair<float, float>> vec;
   	vec.push_back(make_pair(0,G));
-	vec.push_back(make_pair(-sqrt(3)*G,-G/2));
+	vec.push_back(make_pair(-sqrt(3)*G/2,-G/2));
 	vec.push_back(make_pair(sqrt(3)*G/2,-G/2));
 	return vec;
 }
@@ -446,8 +431,8 @@ vector<pair<float, float>> generateLimniscatePattern(float r){
   
 	theta = start;
 	for (double j = 0; j < 2 * PI; j += 0.05) {
-	  	scale = r * (2 / (3 - cos(2 * theta)));  //moves the ball
-		vec.push_back(make_pair(scale * cos(theta), scale * sin(2 * theta) / 1.5));  //(X setpoint, Y setpoint)
+	  	scale = r * (2 / (3 - cos(2 * theta))); 
+		vec.push_back(make_pair(scale * cos(theta), scale * sin(2 * theta) / 1.5));  
 	  	theta += start == 0 ? -0.05 : (start == -2 * PI ? 0.05 : 0);
 	}
   
@@ -459,12 +444,12 @@ void generatePatterns(map<string, vector<pair<float, float>>>& mapPatterns, map<
 	vector<pair<float,float>> vecCenter = {make_pair(0.0,0.0)};
 	mapPatterns["center"] = vecCenter;
 	mapPatterns["square"] = generateSquarePatter(3);
-	mapPatterns["triangle"] = generateTrianglePattern(3);
-	mapPatterns["limniscate"] = generateLimniscatePattern(3);
+	mapPatterns["triangle"] = generateTrianglePattern(4);
+	mapPatterns["limniscate"] = generateLimniscatePattern(5);
 	mapTemp["center"] = 60;
 	mapTemp["square"] = 60;
 	mapTemp["triangle"] = 60;
-	mapTemp["limniscate"] = 60;
+	mapTemp["limniscate"] = 1;
 }
 
 
@@ -482,6 +467,7 @@ int main() {
 	map<string, vector<pair<float, float>>> mapPatterns;
 	map<string,int> mapTemp;
 	//////////////////////// generate patterns ////////////////////////////////////////////////////////////
+
 	generatePatterns(mapPatterns, mapTemp);
 
     ////////////////////////   tracker   //////////////////////////////////////////////////////////////////
@@ -506,9 +492,8 @@ int main() {
     moveWindow(windowName2, windowPos.x + frame.cols, windowPos.y);
     
 	//////////////////////    server    //////////////////////////////////////////////////////////////
-	int port = 80;
-    //httpServer server(port);
-    //thread minhaThread(servidor,ref(server));
+    httpServer server(80);
+    thread minhaThread(servidor,ref(server));
 	const char* ip = "192.168.185.78"; // Substitua pelo IP do ESP32-CAM
 
     UDPSender sender(ip, 12345);
@@ -581,8 +566,8 @@ int main() {
             break;
         }
     }
-	//server.stopServer();
-    //minhaThread.join();
+	server.stopServer();
+    minhaThread.join();
     destroyAllWindows();
 
     return 0;
